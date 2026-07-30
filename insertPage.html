@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/3.3.0/mdb.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
+  <title>Thêm nhân viên</title>
+  <link rel="icon" type="image/x-icon" href="static/icon3.png">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand" href="/"><img src="static/icon3.png" width="35" class="d-inline-block align-top" alt="logo"></a>
+    <div class="collapse navbar-collapse">
+      <div class="form-inline my-2 my-lg-0">
+        <a href="/" class="mr-4 text-white"><h6>Trang chủ</h6></a>
+        <a href="/accounts" class="mr-4 text-white"><h6>Tất cả tài khoản</h6></a>
+        <a href="/approve" class="mr-4 text-white"><h6>Duyệt tài khoản</h6></a>
+        <a href="/classes" class="mr-4 text-white"><h6>Lớp / Môn học</h6></a>
+        <a href="/assignments" class="mr-4 text-white"><h6>Phân công giáo viên</h6></a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container my-5">
+    <h2 class="mb-4">Thêm nhân viên mới (Giáo viên / Học sinh)</h2>
+
+    {% if photo_error %}
+    <p style="color:red"><b>{{ photo_error }}</b></p>
+    {% endif %}
+    {% if invalid == 1 %}
+    <p style="color:red"><b>Mã số, tên đăng nhập đã tồn tại. Vui lòng thử lại.</b></p>
+    {% elif invalid == 2 %}
+    <p style="color:orange"><b>Lưu ý: bạn chưa tải ảnh lên. Nên thêm ảnh để hệ thống nhận diện khuôn mặt tự động.</b></p>
+    {% elif invalid == 3 %}
+    <p style="color:red"><b>Mật khẩu không khớp hoặc chưa đủ 8 ký tự.</b></p>
+    {% elif invalid == 4 %}
+    <p style="color:red"><b>Không gửi được email OTP. Vui lòng thử lại sau.</b></p>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="addForm">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>Vai trò</label>
+            <select class="form-control" name="role" id="roleSelect" required>
+              <option value="student">Học sinh</option>
+              <option value="teacher">Giáo viên</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Mã số</label>
+            <input type="text" class="form-control" name="id" required>
+          </div>
+          <div class="form-group">
+            <label>Họ và tên</label>
+            <input type="text" class="form-control" name="name" required>
+          </div>
+          <div class="form-group" id="deptGroup">
+            <label id="deptLabel">Lớp</label>
+            <select class="form-control" name="dept" id="deptSelect" required>
+              {% for c in classes %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" class="form-control" name="mail" required>
+          </div>
+          <div class="form-group">
+            <label>Tên đăng nhập</label>
+            <input type="text" class="form-control" name="username" required>
+          </div>
+          <div class="form-group">
+            <label>Mật khẩu (ít nhất 8 ký tự)</label>
+            <input type="password" class="form-control" name="pass" pattern=".{8,}" required>
+          </div>
+          <div class="form-group">
+            <label>Nhập lại mật khẩu</label>
+            <input type="password" class="form-control" name="pass2" pattern=".{8,}" required>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label>Ảnh khuôn mặt (rõ nét, không chỉnh sửa để có kết quả tốt nhất)</label>
+          <div class="mb-2">
+            <button type="button" class="btn btn-outline-dark btn-sm" id="btnUpload">Tải từ máy tính</button>
+            <button type="button" class="btn btn-outline-dark btn-sm" id="btnCamera">Chụp ảnh</button>
+          </div>
+          <div id="uploadBox">
+            <input type="file" class="form-control-file" name="photo" accept="image/png, image/jpeg, image/bmp, image/webp">
+          </div>
+          <div id="cameraBox" style="display:none;">
+            <img src="" width="100%" id="cameraStream">
+            <img id="capturedImg" width="100%" style="display:none;">
+            <button type="button" class="btn btn-dark btn-sm mt-2" id="btnCapture">Chụp</button>
+            <button type="button" class="btn btn-outline-dark btn-sm mt-2" id="btnRetake" style="display:none;">Chụp lại</button>
+            <p id="captureStatus"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <button type="submit" class="btn btn-dark btn-lg">Lưu thông tin</button>
+        <button type="reset" class="btn btn-outline-dark btn-lg">Làm lại</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="container my-5">
+    <h3 class="mb-3">Danh sách nhân sự</h3>
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>STT</th><th>Mã NV</th><th>Họ tên</th><th>Vai trò</th><th>Lớp/Môn học</th>
+          <th>Email</th><th>Ngày vào</th><th>Trạng thái tài khoản</th><th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in allRows %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ row.id }}</td>
+          <td>{{ row.name }}</td>
+          <td>{{ role_labels.get(row.role, row.role) }}</td>
+          <td>{{ row.department }}</td>
+          <td>{{ row.email }}</td>
+          <td>{{ row.hiringDate }}</td>
+          <td>{{ status_labels.get(user_status_map.get(row.id), 'Không rõ') }}</td>
+          <td>
+            {% if user_status_map.get(row.id) == 'pending' %}
+            <a href="/approve/{{ row.id }}/activate?next=/add" class="btn btn-success btn-sm">Duyệt nhanh</a>
+            {% endif %}
+            <a href="/accounts/edit/{{ row.id }}" class="btn btn-primary btn-sm">Sửa</a>
+            <a href="/delete/{{ row.id }}" class="btn btn-danger btn-sm"
+               onclick="return confirm('{{ row.name }} sẽ bị xoá vĩnh viễn khỏi hệ thống. Tiếp tục?')">Xoá</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-center">Chưa có dữ liệu</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    var CLASSES = {{ classes | map(attribute='name') | list | tojson }};
+    var SUBJECTS = {{ subjects | map(attribute='name') | list | tojson }};
+    function fillDept(role) {
+      var sel = document.getElementById('deptSelect');
+      var label = document.getElementById('deptLabel');
+      sel.innerHTML = '';
+      var opts = role === 'teacher' ? SUBJECTS : CLASSES;
+      label.innerText = role === 'teacher' ? 'Môn học giảng dạy' : 'Lớp';
+      opts.forEach(function(o) {
+        var opt = document.createElement('option');
+        opt.value = o; opt.innerText = o;
+        sel.appendChild(opt);
+      });
+    }
+    document.getElementById('roleSelect').addEventListener('change', function(e) {
+      fillDept(e.target.value);
+    });
+    fillDept('student');
+
+    document.getElementById('btnUpload').addEventListener('click', function() {
+      document.getElementById('uploadBox').style.display = '';
+      document.getElementById('cameraBox').style.display = 'none';
+      document.getElementById('cameraStream').src = '';
+    });
+    document.getElementById('btnCamera').addEventListener('click', function() {
+      document.getElementById('uploadBox').style.display = 'none';
+      document.getElementById('cameraBox').style.display = '';
+      document.getElementById('cameraStream').src = '/takePhoto?_=' + Date.now();
+    });
+    document.getElementById('btnCapture').addEventListener('click', function() {
+      var canvas = document.createElement('canvas');
+      var img = document.getElementById('cameraStream');
+      canvas.width = img.naturalWidth || 640;
+      canvas.height = img.naturalHeight || 480;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(function(blob) {
+        var fd = new FormData();
+        fd.append('image', blob, 'capture.jpg');
+        fetch('/capture_photo', { method: 'POST', body: fd })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            document.getElementById('captureStatus').innerText = data.message;
+            document.getElementById('captureStatus').style.color = data.success ? 'green' : 'red';
+            if (data.success) {
+              var capturedImg = document.getElementById('capturedImg');
+              capturedImg.src = canvas.toDataURL('image/jpeg');
+              capturedImg.style.display = '';
+              document.getElementById('cameraStream').style.display = 'none';
+              document.getElementById('btnCapture').style.display = 'none';
+              document.getElementById('btnRetake').style.display = '';
+            }
+          });
+      }, 'image/jpeg');
+    });
+    document.getElementById('btnRetake').addEventListener('click', function() {
+      document.getElementById('capturedImg').style.display = 'none';
+      document.getElementById('cameraStream').style.display = '';
+      document.getElementById('cameraStream').src = '/takePhoto?_=' + Date.now();
+      document.getElementById('btnCapture').style.display = '';
+      document.getElementById('btnRetake').style.display = 'none';
+      document.getElementById('captureStatus').innerText = '';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <title>Báo cáo buổi điểm danh</title>
+    <link rel="icon" type="image/x-icon" href="static/icon3.png">
+</head>
+
+<style>
+    .log { color: white; text-decoration: none; }
+    .log:hover { color: blue; text-decoration: none; }
+    .stat-card { border: none; border-radius: 10px; }
+    .section-card { border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; }
+    .section-card .card-header { border-radius: 10px 10px 0 0; font-weight: 600; }
+</style>
+
+<body class="bg-dark" style="min-height: 100vh;">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+        <a class="navbar-brand" href="/"><img src="static/icon3.png" width="35" class="d-inline-block align-top" alt="logo"></a>
+        <div class="collapse navbar-collapse show">
+            <ul class="navbar-nav mr-auto">
+                <li><h6 style="color: white;"><i class="fa fa-calendar-check mr-2"></i>{{ s.name }} — {{ date_display }} ({{ weekday_label }})</h6></li>
+            </ul>
+            <div class="form-inline my-2 my-lg-0">
+                <a href="/sessions" class="mr-4 mt-2 log"><h6><i class="fa fa-arrow-left mr-1"></i>Danh sách buổi</h6></a>
+                <a href="/" class="mr-4 mt-2 log"><h6>Home</h6></a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 text-white">
+
+        <!-- FIX: khung ngoài bọc toàn bộ báo cáo cho dễ nhìn hơn -->
+        <div class="card bg-secondary section-card p-3 mb-4">
+            <form method="get" class="form-inline mb-2">
+                <label class="mr-2"><i class="fa fa-calendar-alt mr-1"></i>Chọn ngày:</label>
+                <input type="date" name="date" value="{{ date_str }}" class="form-control mr-2">
+                <button type="submit" class="btn btn-outline-light btn-sm"><i class="fa fa-search mr-1"></i>Xem</button>
+            </form>
+            <p class="mb-1"><i class="fa fa-clock mr-1"></i>Khung giờ hợp lệ: <b>{{ s.open_time }} — {{ s.close_time }}</b></p>
+            <p class="mb-0"><i class="fa fa-calendar-week mr-1"></i>Ngày áp dụng: <b>{{ s.day_list() | join(', ') }}</b></p>
+        </div>
+
+        {% if not applies_today %}
+        <div class="alert alert-warning">
+            <i class="fa fa-exclamation-triangle mr-1"></i>
+            Lưu ý: buổi <b>{{ s.name }}</b> KHÔNG áp dụng cho {{ weekday_label }}
+            (chỉ áp dụng: {{ s.day_list() | join(', ') }}). Dữ liệu bên dưới vẫn
+            hiển thị để tham khảo.
+        </div>
+        {% endif %}
+
+        <div class="row mt-2">
+            <div class="col-md-3">
+                <div class="card bg-success text-white mb-3 stat-card">
+                    <div class="card-body text-center">
+                        <i class="fa fa-check-circle fa-2x mb-2"></i>
+                        <h6 class="card-title mb-0">Đúng giờ</h6>
+                        <h2>{{ on_time|length }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark mb-3 stat-card">
+                    <div class="card-body text-center">
+                        <i class="fa fa-hourglass-start fa-2x mb-2"></i>
+                        <h6 class="card-title mb-0">Đến sớm</h6>
+                        <h2>{{ early|length }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white mb-3 stat-card">
+                    <div class="card-body text-center">
+                        <i class="fa fa-hourglass-end fa-2x mb-2"></i>
+                        <h6 class="card-title mb-0">Đến trễ</h6>
+                        <h2>{{ late|length }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white mb-3 stat-card">
+                    <div class="card-body text-center">
+                        <i class="fa fa-times-circle fa-2x mb-2"></i>
+                        <h6 class="card-title mb-0">Chưa điểm danh</h6>
+                        <h2>{{ absent|length }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card section-card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="fa fa-hourglass-start mr-2"></i>Đến sớm hơn {{ s.open_time }}
+                    </div>
+                    <div class="card-body bg-dark p-2">
+                        {% if early|length == 0 %}
+                        <p class="text-muted mb-0 p-2">Không có ai.</p>
+                        {% else %}
+                        <table class="table table-dark table-sm table-striped mb-0">
+                            <thead><tr><th>ID</th><th>Tên</th><th>Phòng ban</th><th>Giờ vào</th></tr></thead>
+                            <tbody>
+                                {% for emp, t in early %}
+                                <tr><td>{{emp.id}}</td><td>{{emp.name}}</td><td>{{emp.department}}</td><td>{{t}}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card section-card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <i class="fa fa-hourglass-end mr-2"></i>Đến trễ hơn {{ s.close_time }}
+                    </div>
+                    <div class="card-body bg-dark p-2">
+                        {% if late|length == 0 %}
+                        <p class="text-muted mb-0 p-2">Không có ai.</p>
+                        {% else %}
+                        <table class="table table-dark table-sm table-striped mb-0">
+                            <thead><tr><th>ID</th><th>Tên</th><th>Phòng ban</th><th>Giờ vào</th></tr></thead>
+                            <tbody>
+                                {% for emp, t in late %}
+                                <tr><td>{{emp.id}}</td><td>{{emp.name}}</td><td>{{emp.department}}</td><td>{{t}}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card section-card mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <i class="fa fa-times-circle mr-2"></i>Chưa điểm danh
+                    </div>
+                    <div class="card-body bg-dark p-2">
+                        {% if absent|length == 0 %}
+                        <p class="text-muted mb-0 p-2">Ai cũng đã điểm danh.</p>
+                        {% else %}
+                        <table class="table table-dark table-sm table-striped mb-0">
+                            <thead><tr><th>ID</th><th>Tên</th><th>Phòng ban</th></tr></thead>
+                            <tbody>
+                                {% for emp in absent %}
+                                <tr><td>{{emp.id}}</td><td>{{emp.name}}</td><td>{{emp.department}}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card section-card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <i class="fa fa-check-circle mr-2"></i>Đúng giờ
+                    </div>
+                    <div class="card-body bg-dark p-2">
+                        {% if on_time|length == 0 %}
+                        <p class="text-muted mb-0 p-2">Chưa có ai.</p>
+                        {% else %}
+                        <table class="table table-dark table-sm table-striped mb-0">
+                            <thead><tr><th>ID</th><th>Tên</th><th>Phòng ban</th><th>Giờ vào</th></tr></thead>
+                            <tbody>
+                                {% for emp, t in on_time %}
+                                <tr><td>{{emp.id}}</td><td>{{emp.name}}</td><td>{{emp.department}}</td><td>{{t}}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+</body>
+
+</html>

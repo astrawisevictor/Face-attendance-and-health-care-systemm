@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/3.3.0/mdb.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
+  <title>Quản lý hệ thống</title>
+  <link rel="icon" type="image/x-icon" href="static/icon3.png">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-brand" href="/"><img src="static/icon3.png" width="35" class="d-inline-block align-top" alt="logo"></a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <div class="form-inline my-2 my-lg-0">
+      <a href="/" class="mr-4 text-white"><h6>Trang chủ</h6></a>
+      <div class="dropdown mr-4 mt-2" style="margin-top:-4px;">
+        <h6 class="dropdown-toggle text-white" id="quanLyDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="cursor:pointer;">Quản lý</h6>
+        <div class="dropdown-menu" aria-labelledby="quanLyDropdown">
+          <a class="dropdown-item" href="/registerEmployee"><i class="fa fa-user-plus mr-2"></i>Thêm nhân viên</a>
+          <a class="dropdown-item" href="/manage?active_tab=student"><i class="fa fa-user-graduate mr-2"></i>Học sinh</a>
+          <a class="dropdown-item" href="/manage?active_tab=teacher"><i class="fa fa-chalkboard-teacher mr-2"></i>Giáo viên</a>
+          <a class="dropdown-item" href="/manage?active_tab=accounts"><i class="fa fa-users mr-2"></i>Tài khoản</a>
+          <a class="dropdown-item" href="/manage?active_tab=approve"><i class="fa fa-user-check mr-2"></i>Duyệt tài khoản</a>
+          <a class="dropdown-item" href="/manage?active_tab=classes"><i class="fa fa-school mr-2"></i>Lớp học</a>
+          <a class="dropdown-item" href="/manage?active_tab=subjects"><i class="fa fa-book mr-2"></i>Môn học</a>
+          <a class="dropdown-item" href="/manage?active_tab=assignments"><i class="fa fa-tasks mr-2"></i>Phân công giáo viên</a>
+        </div>
+      </div>
+      <a href="/encode" class="mr-4 text-white"><h6>Nhận diện</h6></a>
+      <a href="/reports" class="mr-4 text-white"><h6>Báo cáo</h6></a>
+      <a href="/logout" class="mr-4 text-white"><h6>Đăng xuất</h6></a>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid my-4" style="max-width:1400px;">
+  <h2 class="mb-3">Quản lý hệ thống</h2>
+
+  {% if invalid == 1 %}<p class="text-danger"><b>Mã số, tên đăng nhập đã tồn tại. Vui lòng thử lại.</b></p>{% endif %}
+  {% if invalid == 2 %}<p class="text-warning"><b>Lưu ý: bạn chưa tải ảnh lên. Nên thêm ảnh để hệ thống nhận diện khuôn mặt tự động.</b></p>{% endif %}
+  {% if invalid == 3 %}<p class="text-danger"><b>Mật khẩu không khớp hoặc chưa đủ 8 ký tự.</b></p>{% endif %}
+  {% if invalid == 4 %}<p class="text-danger"><b>Không gửi được email OTP. Vui lòng thử lại sau.</b></p>{% endif %}
+  {% if invalid == 5 %}<p class="text-danger"><b>{{ photo_error }}</b></p>{% endif %}
+
+  <ul class="nav nav-tabs" id="manageTabs" role="tablist">
+    <li class="nav-item"><a class="nav-link {{ 'active' if active_tab=='student' }}" id="tablink-student" data-toggle="tab" href="#tab-student" role="tab">Học sinh</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if active_tab=='teacher' }}" id="tablink-teacher" data-toggle="tab" href="#tab-teacher" role="tab">Giáo viên</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if active_tab=='accounts' }}" id="tablink-accounts" data-toggle="tab" href="#tab-accounts" role="tab">Tài khoản</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if active_tab=='approve' }}" id="tablink-approve" data-toggle="tab" href="#tab-approve" role="tab">Duyệt tài khoản</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if active_tab=='classes' }}" id="tablink-classes" data-toggle="tab" href="#tab-classes" role="tab">Lớp học</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if active_tab=='subjects' }}" id="tablink-subjects" data-toggle="tab" href="#tab-subjects" role="tab">Môn học</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if active_tab=='assignments' }}" id="tablink-assignments" data-toggle="tab" href="#tab-assignments" role="tab">Phân công giáo viên</a></li>
+  </ul>
+
+  <div class="tab-content border border-top-0 p-3 bg-white">
+
+    <div class="tab-pane fade {{ 'show active' if active_tab=='student' }}" id="tab-student" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Học sinh</h4>
+        <div>
+          <a class="btn btn-outline-dark btn-sm" href="/manage/export/student"><i class="fa fa-file-export mr-1"></i>Xuất file</a>
+        </div>
+      </div>
+      <form method="get" action="/manage" class="form-inline mb-3">
+        <input type="hidden" name="active_tab" value="student">
+        <input type="text" class="form-control mr-2 mb-2" name="q_student" value="{{q_student}}" placeholder="Tìm theo mã số hoặc họ tên">
+        <select class="form-control mr-2 mb-2" name="dept_student">
+          <option value="">Tất cả lớp</option>
+          {% for c in classes %}<option value="{{c.name}}" {{ 'selected' if dept_student==c.name }}>{{c.name}}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary mb-2">Lọc</button>
+      </form>
+      <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead><tr><th>Mã số</th><th>Họ tên</th><th>Lớp</th><th>Email</th><th>Ngày vào</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+        <tbody>
+        {% for u in student_users %}
+        {% set emp = student_emp_map.get(u.id) %}
+        <tr>
+          <td>{{u.id}}</td><td>{{u.name}}</td><td>{{emp.department if emp else ''}}</td>
+          <td>{{u.mail}}</td><td>{{emp.hiringDate if emp else ''}}</td>
+          <td>{{status_labels.get(u.status,u.status)}}</td>
+          <td>
+            <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target="#edit-{{u.id}}">Sửa</button>
+            <a class="btn btn-danger btn-sm" href="/accounts/delete/{{u.id}}?next=/manage%3Factive_tab%3Dstudent" onclick="return confirm('{{u.name|replace("'", "\\'")}} sẽ bị xoá vĩnh viễn. Tiếp tục?')">Xoá</a>
+          </td>
+        </tr>
+        <tr class="collapse {{ 'show' if edit_uid==u.id }}" id="edit-{{u.id}}"><td colspan="7">
+          <form method="post" action="/accounts/edit/{{u.id}}" enctype="multipart/form-data" class="form-row align-items-end">
+            <input type="hidden" name="qs" value="active_tab=student">
+            <div class="form-group col-md-2"><label>Tên đăng nhập</label><input class="form-control" name="username" value="{{u.username}}" required></div>
+            <div class="form-group col-md-2"><label>Họ tên</label><input class="form-control" name="name" value="{{u.name}}" required></div>
+            <div class="form-group col-md-2"><label>Email</label><input type="email" class="form-control" name="mail" value="{{u.mail}}" required></div>
+            <div class="form-group col-md-2"><label>Lớp</label>
+              <select class="form-control" name="dept">
+                {% for c in classes %}<option value="{{c.name}}" {{ 'selected' if emp and emp.department==c.name }}>{{c.name}}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group col-md-2"><label>Trạng thái</label>
+              <select class="form-control" name="status">
+                {% for k,v in status_labels.items() %}<option value="{{k}}" {{ 'selected' if u.status==k }}>{{v}}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group col-md-2"><label>Mật khẩu mới</label><input type="password" class="form-control" name="new_pass" pattern=".{8,}"></div>
+            <div class="form-group col-md-2"><label>Nhập lại</label><input type="password" class="form-control" name="new_pass2" pattern=".{8,}"></div>
+            <div class="form-group col-md-2"><label>Ảnh mới</label><input type="file" class="form-control-file" name="photo" accept="image/png, image/jpeg, image/bmp, image/webp"></div>
+            <div class="form-group col-md-2"><button type="submit" class="btn btn-success">Lưu</button></div>
+          </form>
+        </td></tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center">Chưa có dữ liệu</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="tab-pane fade {{ 'show active' if active_tab=='teacher' }}" id="tab-teacher" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Giáo viên</h4>
+        <div>
+          <a class="btn btn-outline-dark btn-sm" href="/manage/export/teacher"><i class="fa fa-file-export mr-1"></i>Xuất file</a>
+        </div>
+      </div>
+      <form method="get" action="/manage" class="form-inline mb-3">
+        <input type="hidden" name="active_tab" value="teacher">
+        <input type="text" class="form-control mr-2 mb-2" name="q_teacher" value="{{q_teacher}}" placeholder="Tìm theo mã số hoặc họ tên">
+        <select class="form-control mr-2 mb-2" name="dept_teacher">
+          <option value="">Tất cả môn học</option>
+          {% for s in subjects %}<option value="{{s.name}}" {{ 'selected' if dept_teacher==s.name }}>{{s.name}}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary mb-2">Lọc</button>
+      </form>
+      <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead><tr><th>Mã số</th><th>Họ tên</th><th>Môn học</th><th>Email</th><th>Ngày vào</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+        <tbody>
+        {% for u in teacher_users %}
+        {% set emp = teacher_emp_map.get(u.id) %}
+        <tr>
+          <td>{{u.id}}</td><td>{{u.name}}</td><td>{{emp.department if emp else ''}}</td>
+          <td>{{u.mail}}</td><td>{{emp.hiringDate if emp else ''}}</td>
+          <td>{{status_labels.get(u.status,u.status)}}</td>
+          <td>
+            <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target="#edit-{{u.id}}">Sửa</button>
+            <a class="btn btn-danger btn-sm" href="/accounts/delete/{{u.id}}?next=/manage%3Factive_tab%3Dteacher" onclick="return confirm('{{u.name|replace("'", "\\'")}} sẽ bị xoá vĩnh viễn. Tiếp tục?')">Xoá</a>
+          </td>
+        </tr>
+        <tr class="collapse {{ 'show' if edit_uid==u.id }}" id="edit-{{u.id}}"><td colspan="7">
+          <form method="post" action="/accounts/edit/{{u.id}}" enctype="multipart/form-data" class="form-row align-items-end">
+            <input type="hidden" name="qs" value="active_tab=teacher">
+            <div class="form-group col-md-2"><label>Tên đăng nhập</label><input class="form-control" name="username" value="{{u.username}}" required></div>
+            <div class="form-group col-md-2"><label>Họ tên</label><input class="form-control" name="name" value="{{u.name}}" required></div>
+            <div class="form-group col-md-2"><label>Email</label><input type="email" class="form-control" name="mail" value="{{u.mail}}" required></div>
+            <div class="form-group col-md-2"><label>Môn học</label>
+              <select class="form-control" name="dept">
+                {% for s in subjects %}<option value="{{s.name}}" {{ 'selected' if emp and emp.department==s.name }}>{{s.name}}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group col-md-2"><label>Trạng thái</label>
+              <select class="form-control" name="status">
+                {% for k,v in status_labels.items() %}<option value="{{k}}" {{ 'selected' if u.status==k }}>{{v}}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group col-md-2"><label>Mật khẩu mới</label><input type="password" class="form-control" name="new_pass" pattern=".{8,}"></div>
+            <div class="form-group col-md-2"><label>Nhập lại</label><input type="password" class="form-control" name="new_pass2" pattern=".{8,}"></div>
+            <div class="form-group col-md-2"><label>Ảnh mới</label><input type="file" class="form-control-file" name="photo" accept="image/png, image/jpeg, image/bmp, image/webp"></div>
+            <div class="form-group col-md-2"><button type="submit" class="btn btn-success">Lưu</button></div>
+          </form>
+        </td></tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center">Chưa có dữ liệu</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="tab-pane fade {{ 'show active' if active_tab=='accounts' }}" id="tab-accounts" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Tài khoản</h4>
+        <a class="btn btn-outline-dark btn-sm" href="/manage/export/accounts"><i class="fa fa-file-export mr-1"></i>Xuất file</a>
+      </div>
+      <form method="get" action="/manage" class="form-inline mb-3">
+        <input type="hidden" name="active_tab" value="accounts">
+        <input type="text" class="form-control mr-2 mb-2" name="q_accounts" value="{{q_accounts}}" placeholder="Tìm theo mã số, tên hoặc tên đăng nhập">
+        <select class="form-control mr-2 mb-2" name="role_accounts">
+          <option value="">Tất cả vai trò</option>
+          <option value="admin" {{ 'selected' if role_accounts=='admin' }}>Quản trị viên</option>
+          <option value="teacher" {{ 'selected' if role_accounts=='teacher' }}>Giáo viên</option>
+          <option value="student" {{ 'selected' if role_accounts=='student' }}>Học sinh</option>
+        </select>
+        <select class="form-control mr-2 mb-2" name="status_accounts">
+          <option value="">Tất cả trạng thái</option>
+          {% for k,v in status_labels.items() %}<option value="{{k}}" {{ 'selected' if status_accounts==k }}>{{v}}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary mb-2">Lọc</button>
+      </form>
+      <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead><tr><th>Mã số</th><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th>Trạng thái</th><th>Email</th><th>Thao tác</th></tr></thead>
+        <tbody>
+        {% for u in all_users %}
+        {% set emp = emp_map.get(u.id) %}
+        <tr>
+          <td>{{u.id}}</td><td>{{u.username}}</td><td>{{u.name}}</td>
+          <td>{{'Quản trị viên' if u.role=='admin' else role_labels.get(u.role,u.role)}}</td>
+          <td>{{status_labels.get(u.status,u.status)}}</td><td>{{u.mail}}</td>
+          <td>
+            <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target="#edit-acc-{{u.id}}">Sửa</button>
+            {% if u.id != current_user.id %}
+            <a class="btn btn-danger btn-sm" href="/accounts/delete/{{u.id}}?next=/manage%3Factive_tab%3Daccounts" onclick="return confirm('{{u.name|replace("'", "\\'")}} sẽ bị xoá vĩnh viễn. Tiếp tục?')">Xoá</a>
+            {% endif %}
+          </td>
+        </tr>
+        <tr class="collapse {{ 'show' if edit_uid==u.id }}" id="edit-acc-{{u.id}}"><td colspan="7">
+          <form method="post" action="/accounts/edit/{{u.id}}" enctype="multipart/form-data" class="form-row align-items-end">
+            <input type="hidden" name="qs" value="active_tab=accounts">
+            <div class="form-group col-md-2"><label>Tên đăng nhập</label><input class="form-control" name="username" value="{{u.username}}" required></div>
+            <div class="form-group col-md-2"><label>Họ tên</label><input class="form-control" name="name" value="{{u.name}}" required></div>
+            <div class="form-group col-md-2"><label>Email</label><input type="email" class="form-control" name="mail" value="{{u.mail}}" required></div>
+            {% if u.role != 'admin' %}
+            <div class="form-group col-md-2"><label>{{'Môn học' if u.role=='teacher' else 'Lớp'}}</label>
+              <select class="form-control" name="dept">
+                {% for o in (subjects if u.role=='teacher' else classes) %}<option value="{{o.name}}" {{ 'selected' if emp and emp.department==o.name }}>{{o.name}}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group col-md-2"><label>Trạng thái</label>
+              <select class="form-control" name="status">
+                {% for k,v in status_labels.items() %}<option value="{{k}}" {{ 'selected' if u.status==k }}>{{v}}</option>{% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            <div class="form-group col-md-2"><label>Mật khẩu mới</label><input type="password" class="form-control" name="new_pass" pattern=".{8,}"></div>
+            <div class="form-group col-md-2"><label>Nhập lại</label><input type="password" class="form-control" name="new_pass2" pattern=".{8,}"></div>
+            {% if u.role != 'admin' %}
+            <div class="form-group col-md-2"><label>Ảnh mới</label><input type="file" class="form-control-file" name="photo" accept="image/png, image/jpeg, image/bmp, image/webp"></div>
+            {% endif %}
+            <div class="form-group col-md-2"><button type="submit" class="btn btn-success">Lưu</button></div>
+          </form>
+        </td></tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center">Chưa có dữ liệu</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="tab-pane fade {{ 'show active' if active_tab=='approve' }}" id="tab-approve" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Duyệt tài khoản</h4>
+        <a class="btn btn-outline-dark btn-sm" href="/manage/export/approve"><i class="fa fa-file-export mr-1"></i>Xuất file</a>
+      </div>
+      <h5>Chờ duyệt</h5>
+      <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead><tr><th>Mã số</th><th>Họ tên</th><th>Vai trò</th><th>Email</th><th>Thao tác</th></tr></thead>
+        <tbody>
+        {% for u in pending %}
+        <tr><td>{{u.id}}</td><td>{{u.name}}</td><td>{{role_labels.get(u.role,u.role)}}</td><td>{{u.mail}}</td>
+          <td><a class="btn btn-success btn-sm" href="/approve/{{u.id}}/activate?next=/manage%3Factive_tab%3Dapprove">Duyệt</a></td>
+        </tr>
+        {% else %}<tr><td colspan="5" class="text-center">Không có tài khoản chờ duyệt</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <h5>Đang hoạt động</h5>
+      <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead><tr><th>Mã số</th><th>Họ tên</th><th>Vai trò</th><th>Email</th><th>Thao tác</th></tr></thead>
+        <tbody>
+        {% for u in active %}
+        <tr><td>{{u.id}}</td><td>{{u.name}}</td><td>{{role_labels.get(u.role,u.role)}}</td><td>{{u.mail}}</td>
+          <td><a class="btn btn-warning btn-sm" href="/approve/{{u.id}}/disable?next=/manage%3Factive_tab%3Dapprove">Vô hiệu hoá</a></td>
+        </tr>
+        {% else %}<tr><td colspan="5" class="text-center">Không có tài khoản</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <h5>Đã vô hiệu hoá</h5>
+      <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead><tr><th>Mã số</th><th>Họ tên</th><th>Vai trò</th><th>Email</th><th>Thao tác</th></tr></thead>
+        <tbody>
+        {% for u in disabled %}
+        <tr><td>{{u.id}}</td><td>{{u.name}}</td><td>{{role_labels.get(u.role,u.role)}}</td><td>{{u.mail}}</td>
+          <td><a class="btn btn-success btn-sm" href="/approve/{{u.id}}/activate?next=/manage%3Factive_tab%3Dapprove">Kích hoạt lại</a></td>
+        </tr>
+        {% else %}<tr><td colspan="5" class="text-center">Không có tài khoản</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="tab-pane fade {{ 'show active' if active_tab=='classes' }}" id="tab-classes" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Lớp học</h4>
+        <a class="btn btn-outline-dark btn-sm" href="/manage/export/classes"><i class="fa fa-file-export mr-1"></i>Xuất file</a>
+      </div>
+      <form method="get" action="/manage" class="form-inline mb-3">
+        <input type="hidden" name="active_tab" value="classes">
+        <input type="text" class="form-control mr-2 mb-2" name="q_classes" value="{{q_classes}}" placeholder="Tìm theo tên lớp">
+        <button type="submit" class="btn btn-secondary mb-2">Lọc</button>
+      </form>
+      <form method="post" action="/classes" class="form-inline mb-3">
+        <input type="hidden" name="action" value="add_class">
+        <select class="form-control mr-2 mb-2" name="class_grade" style="width:110px;">
+          <option value="">Khối</option>
+          <option value="10">Khối 10</option>
+          <option value="11">Khối 11</option>
+          <option value="12">Khối 12</option>
+        </select>
+        <input type="text" class="form-control mr-2 mb-2" name="class_name" placeholder="Tên lớp mới (VD: 10A1)" required>
+        <button type="submit" class="btn btn-dark mb-2"><i class="fa fa-plus mr-1"></i>Thêm lớp</button>
+      </form>
+      <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead><tr><th>Khối</th><th>Lớp</th><th>Thao tác</th></tr></thead>
+        <tbody>
+        {% for c in classes_all %}
+        <tr><td>{{c.grade or ''}}</td><td>{{c.name}}</td><td>
+          <form method="post" action="/classes" class="d-inline" onsubmit="return confirm('Xoá lớp {{c.name|replace("'", "\\'")}}?')">
+            <input type="hidden" name="action" value="delete_class">
+            <input type="hidden" name="class_id" value="{{c.id}}">
+            <button type="submit" class="btn btn-danger btn-sm">Xoá</button>
+          </form>
+        </td></tr>
+        {% else %}<tr><td colspan="3" class="text-center">Chưa có lớp học</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="tab-pane fade {{ 'show active' if active_tab=='subjects' }}" id="tab-subjects" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Môn học</h4>
+        <a class="btn btn-outline-dark btn-sm" href="/manage/export/subjects"><i class="fa fa-file-export mr-1"></i>Xuất file</a>
+      </div>
+      <form method="get" action="/manage" class="form-inline mb-3">
+        <input type="hidden" name="active_tab" value="subjects">
+        <input type="text" class="form-control mr-2 mb-2" name="q_subjects" value="{{q_subjects}}" placeholder="Tìm theo tên môn học">
+        <button type="submit" class="btn btn-secondary mb-2">Lọc</button>
+      </form>
+      <form method="post" action="/classes" class="form-inline mb-3">
+        <input type="hidden" name="action" value="add_subject">
+        <input type="text" class="form-control mr-2" name="subject_name" placeholder="Tên môn học mới" required>
+        <button type="submit" class="btn btn-dark"><i class="fa fa-plus mr-1"></i>Thêm môn học</button>
+      </form>
+      <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead><tr><th>Môn học</th><th>Thao tác</th></tr></thead>
+        <tbody>
+        {% for s in subjects_all %}
+        <tr><td>{{s.name}}</td><td>
+          <form method="post" action="/classes" class="d-inline" onsubmit="return confirm('Xoá môn học {{s.name|replace("'", "\\'")}}?')">
+            <input type="hidden" name="action" value="delete_subject">
+            <input type="hidden" name="subject_id" value="{{s.id}}">
+            <button type="submit" class="btn btn-danger btn-sm">Xoá</button>
+          </form>
+        </td></tr>
+        {% else %}<tr><td colspan="2" class="text-center">Chưa có môn học</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="tab-pane fade {{ 'show active' if active_tab=='assignments' }}" id="tab-assignments" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Phân công giáo viên</h4>
+        <a class="btn btn-outline-dark btn-sm" href="/manage/export/assignments"><i class="fa fa-file-export mr-1"></i>Xuất file</a>
+      </div>
+      <form method="get" action="/manage" class="form-inline mb-3">
+        <input type="hidden" name="active_tab" value="assignments">
+        <select class="form-control mr-2 mb-2" name="filter_teacher_assign">
+          <option value="">Tất cả giáo viên</option>
+          {% for t in teachers %}<option value="{{t.id}}" {{ 'selected' if filter_teacher_assign==t.id }}>{{t.name}}</option>{% endfor %}
+        </select>
+        <select class="form-control mr-2 mb-2" name="filter_class_assign">
+          <option value="">Tất cả lớp</option>
+          {% for c in classes %}<option value="{{c.name}}" {{ 'selected' if filter_class_assign==c.name }}>{{c.name}}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary mb-2">Lọc</button>
+      </form>
+      <form method="post" action="/classes" class="form-inline mb-3">
+        <input type="hidden" name="action" value="assign">
+        <select class="form-control mr-2 mb-2" name="teacher_id" required>
+          <option value="" disabled selected>Chọn giáo viên</option>
+          {% for t in teachers %}<option value="{{t.id}}">{{t.name}}</option>{% endfor %}
+        </select>
+        <select class="form-control mr-2 mb-2" name="class_name" required>
+          <option value="" disabled selected>Chọn lớp</option>
+          {% for c in classes %}<option value="{{c.name}}">{{c.name}}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-dark mb-2"><i class="fa fa-plus mr-1"></i>Phân công</button>
+      </form>
+      <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead><tr><th>Giáo viên</th><th>Lớp</th><th>Thao tác</th></tr></thead>
+        <tbody>
+        {% for a in assignments %}
+        {% set t = teachers | selectattr('id','equalto',a.teacher_id) | list | first %}
+        <tr><td>{{t.name if t else a.teacher_id}}</td><td>{{a.class_name}}</td><td>
+          <form method="post" action="/classes" class="d-inline" onsubmit="return confirm('Huỷ phân công này?')">
+            <input type="hidden" name="action" value="unassign">
+            <input type="hidden" name="assignment_id" value="{{a.id}}">
+            <button type="submit" class="btn btn-danger btn-sm">Huỷ</button>
+          </form>
+        </td></tr>
+        {% else %}<tr><td colspan="3" class="text-center">Chưa có phân công</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+  integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+  integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
+  integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<style>
+  .navbar .dropdown-menu.show { display: block !important; z-index: 1051 !important; pointer-events: auto !important; }
+  .navbar .dropdown, .navbar .dropdown-toggle, .navbar .dropdown-item { pointer-events: auto !important; }
+  .is-invalid { border-color: #dc3545 !important; background-image: none !important; }
+  .is-valid { border-color: #28a745 !important; }
+  .photo-feedback.text-danger, .camera-status.text-danger { color: #dc3545; }
+  .photo-feedback.text-success, .camera-status.text-success { color: #28a745; }
+  .photo-mode-toggle button { border-radius: 6px; margin-right: 6px; padding: 6px 14px; transition: all .15s ease; }
+  .photo-mode-toggle button.active { background-color: #212529; color: #fff; border-color: #212529; }
+  .photo-mode-toggle button.is-invalid { border-color: #dc3545; }
+  .photo-panel { border: 1px solid #e2e2e2; border-radius: 8px; padding: 12px; margin: 8px 2px 0; background: #fafafa; }
+  .emp-form { background: #fff; }
+  .emp-form .form-group { margin-bottom: .8rem; }
+</style>
+<script>
+  $('#manageTabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+    var tab = e.target.id.replace('tablink-', '');
+    var url = new URL(window.location);
+    url.searchParams.set('active_tab', tab);
+    history.replaceState(null, '', url);
+  });
+
+  function fieldErrorMsg(el) {
+    if (el.type === 'email') return 'Email không hợp lệ';
+    if (el.name === 'pass') return 'Mật khẩu phải từ 8 ký tự trở lên';
+    if (el.name === 'pass2') return 'Mật khẩu nhập lại không khớp';
+    return 'Vui lòng nhập trường này';
+  }
+
+  function showFieldError(el, show, msg) {
+    var box = el.parentElement;
+    var errEl = box.querySelector('.field-error');
+    if (!errEl) {
+      errEl = document.createElement('div');
+      errEl.className = 'field-error small text-danger mt-1';
+      box.appendChild(errEl);
+    }
+    errEl.textContent = show ? msg : '';
+    errEl.style.display = show ? '' : 'none';
+  }
+
+  function validateRequiredFields(form) {
+    var ok = true;
+    form.querySelectorAll('[required]').forEach(function(el) {
+      var val = (el.value || '').trim();
+      var fieldOk = val.length > 0;
+      if (el.hasAttribute('pattern') && fieldOk) {
+        try { fieldOk = new RegExp('^(?:' + el.getAttribute('pattern') + ')$').test(val); } catch (e) {}
+      }
+      if (el.type === 'email' && fieldOk) {
+        fieldOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val);
+      }
+      el.classList.remove('is-invalid', 'is-valid');
+      if (!fieldOk) { el.classList.add('is-invalid'); ok = false; showFieldError(el, true, fieldErrorMsg(el)); }
+      else { el.classList.add('is-valid'); showFieldError(el, false, ''); }
+    });
+    var pass = form.querySelector('input[name="pass"]');
+    var pass2 = form.querySelector('input[name="pass2"]');
+    if (pass && pass2 && pass.value && pass2.value && pass.value !== pass2.value) {
+      pass2.classList.add('is-invalid');
+      pass2.classList.remove('is-valid');
+      showFieldError(pass2, true, fieldErrorMsg(pass2));
+      ok = false;
+    }
+    return ok;
+  }
+
+  document.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(el) {
+    el.addEventListener('input', function() { el.classList.remove('is-invalid'); showFieldError(el, false, ''); });
+    el.addEventListener('change', function() { el.classList.remove('is-invalid'); showFieldError(el, false, ''); });
+  });
+
+  function checkFaceImage(file, feedbackEl, inputEl) {
+    if (!file) { feedbackEl.textContent = ''; inputEl.dataset.faceOk = ''; return; }
+    inputEl.dataset.faceOk = '';
+    feedbackEl.textContent = 'Đang kiểm tra ảnh...';
+    feedbackEl.className = 'photo-feedback small mt-1 text-muted';
+    var fd = new FormData();
+    fd.append('photo', file);
+    fetch('/check_face', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        feedbackEl.textContent = data.message;
+        if (data.ok) {
+          feedbackEl.className = 'photo-feedback small mt-1 text-success';
+          inputEl.classList.remove('is-invalid'); inputEl.classList.add('is-valid');
+          inputEl.dataset.faceOk = '1';
+        } else {
+          feedbackEl.className = 'photo-feedback small mt-1 text-danger';
+          inputEl.classList.remove('is-valid'); inputEl.classList.add('is-invalid');
+          inputEl.dataset.faceOk = '0';
+        }
+      })
+      .catch(function() {
+        feedbackEl.textContent = 'Không kiểm tra được ảnh ngay lúc này.';
+        feedbackEl.className = 'photo-feedback small mt-1 text-danger';
+        inputEl.dataset.faceOk = '0';
+      });
+  }
+
+  document.querySelectorAll('input.photo-file-input, input[name="photo"]').forEach(function(input) {
+    var feedback = input.parentElement.querySelector('.photo-feedback');
+    if (!feedback) {
+      feedback = document.createElement('div');
+      feedback.className = 'photo-feedback small mt-1';
+      input.parentElement.appendChild(feedback);
+    }
+    input.addEventListener('change', function() {
+      checkFaceImage(input.files && input.files[0], feedback, input);
+      var form = input.closest('form');
+      if (form) {
+        form.querySelectorAll('.photo-mode-toggle button').forEach(function(b) { b.classList.remove('is-invalid'); });
+        var hint = form.querySelector('.photo-required-hint');
+        if (hint) { hint.style.display = 'none'; hint.classList.remove('text-danger'); }
+      }
+    });
+  });
+
+  document.querySelectorAll('form[action^="/accounts/edit/"]').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      if (!validateRequiredFields(form)) {
+        e.preventDefault();
+        var firstInvalid = form.querySelector('.is-invalid');
+        if (firstInvalid) firstInvalid.focus();
+        return false;
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

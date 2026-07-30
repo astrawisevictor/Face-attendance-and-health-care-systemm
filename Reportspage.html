@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Báo cáo tổng hợp</title>
+<link rel="icon" type="image/x-icon" href="static/icon3.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.3/css/responsive.dataTables.min.css">
+</head>
+<style>
+body, table, th, td, .card, .btn, h1, h2, h3, h4, h5, h6, label, input, select, .navbar-brand, .nav-link {
+font-family: Arial, Helvetica, sans-serif;
+}
+.log { color: white; text-decoration: none; }
+.log:hover { color: blue; text-decoration: none; }
+.section-card { border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.3); margin-bottom: 1.5rem; }
+.section-card .card-header { border-radius: 10px 10px 0 0; font-weight: 600; font-size: 1.05rem; letter-spacing: .3px; padding: .65rem 1rem; }
+.stat-card { border: none; border-radius: 10px; }
+.stat-card .card-body { padding: 1.1rem .5rem; }
+.nav-tabs .nav-link.active { background-color: #161717; color: white; border-color: #444 #444 #161717; }
+.nav-tabs .nav-link { color: white; }
+.table th, .table td { border: 1px solid rgba(255,255,255,0.25) !important; }
+@media print {
+nav, .nav-tabs, form, .btn, .modal { display: none !important; }
+.print-header { display: block !important; }
+body { background: white !important; color: black !important; }
+.card, .table, .badge { color: black !important; }
+.table th, .table td { border: 1px solid #000 !important; }
+}
+.print-header { display: none; }
+</style>
+<body class="bg-dark" style="min-height: 100vh;">
+<div class="print-header text-center mb-4">
+<h4>BÁO CÁO TỔNG HỢP ĐIỂM DANH VÀ SỨC KHỎE</h4>
+<p class="mb-0">Ngày lập báo cáo: {{ report_generated_at }}</p>
+<p class="mb-0">Người lập: {{ current_user.username if current_user.is_authenticated else '' }}</p>
+</div>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+<a class="navbar-brand" href="/"><img src="static/icon3.png" width="35" class="d-inline-block align-top" alt="logo"></a>
+<div class="collapse navbar-collapse show">
+<ul class="navbar-nav mr-auto">
+<li><h6 style="color: white;"><i class="fa fa-chart-pie mr-2"></i>Báo cáo tổng hợp</h6></li>
+</ul>
+<div class="form-inline my-2 my-lg-0">
+<a href="/" class="mr-4 mt-2 log"><h6>Trang chủ</h6></a>
+<a href="/logout" class="mr-4 mt-2 log"><h6>Đăng xuất</h6></a>
+<h6 class="my-2 my-sm-0" style="color: white;">Xin chào, {{current_user.username}}</h6>
+</div>
+</div>
+</nav>
+<div class="container mt-4 text-white">
+<ul class="nav nav-tabs" id="reportTabs" role="tablist">
+<li class="nav-item"><a class="nav-link{% if active_tab=='sheet' %} active{% endif %}" id="tab-sheet-btn" data-toggle="tab" href="#tab-sheet" role="tab"><i class="fa fa-table mr-1"></i>Bảng điểm danh</a></li>
+<li class="nav-item"><a class="nav-link{% if active_tab=='sessionreport' %} active{% endif %}" id="tab-sessionreport-btn" data-toggle="tab" href="#tab-sessionreport" role="tab"><i class="fa fa-clipboard-check mr-1"></i>Báo cáo buổi</a></li>
+<li class="nav-item"><a class="nav-link{% if active_tab=='health' %} active{% endif %}" id="tab-health-btn" data-toggle="tab" href="#tab-health" role="tab"><i class="fa fa-heartbeat mr-1"></i>Sức khỏe</a></li>
+</ul>
+<div class="tab-content mt-3">
+<div class="tab-pane fade{% if active_tab=='sheet' %} show active{% endif %}" id="tab-sheet" role="tabpanel">
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary"><i class="fa fa-plus-circle mr-2"></i>Tạo buổi điểm danh mới</div>
+<div class="card-body bg-dark">
+{% if session_error %}
+<div class="alert alert-danger">{{ session_error }}</div>
+{% endif %}
+<form method="post" action="/sessions">
+<input type="hidden" name="qs" value="{{ current_qs }}">
+<div class="form-row">
+<div class="form-group col-md-4">
+<label><i class="fa fa-tag mr-1"></i>Tên buổi</label>
+<input type="text" class="form-control" name="name" placeholder="VD: Buổi sáng" required>
+</div>
+<div class="form-group col-md-3">
+<label><i class="fa fa-door-open mr-1"></i>Giờ mở cổng</label>
+<input type="time" class="form-control" name="open_time" required>
+</div>
+<div class="form-group col-md-3">
+<label><i class="fa fa-door-closed mr-1"></i>Giờ đóng cổng</label>
+<input type="time" class="form-control" name="close_time" required>
+</div>
+<div class="form-group col-md-2 d-flex align-items-end">
+<button type="submit" class="btn btn-dark btn-block"><i class="fa fa-save mr-1"></i>Tạo buổi</button>
+</div>
+</div>
+<div class="form-group">
+<label><i class="fa fa-calendar-week mr-1"></i>Áp dụng cho các ngày</label><br>
+{% for code in weekday_codes %}
+<div class="form-check form-check-inline">
+<input class="form-check-input" type="checkbox" name="days" value="{{code}}" id="day{{code}}">
+<label class="form-check-label" for="day{{code}}">{{ weekday_labels[code] }}</label>
+</div>
+{% endfor %}
+</div>
+</form>
+</div>
+</div>
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary"><i class="fa fa-list mr-2"></i>Danh sách buổi đã tạo</div>
+<div class="card-body bg-dark p-2">
+{% if all_sessions|length == 0 %}
+<div class="alert alert-dark mb-0">Chưa có buổi điểm danh nào.</div>
+{% else %}
+<table class="table table-dark table-striped mb-0">
+<thead>
+<tr>
+<th>Tên buổi</th><th data-toggle="tooltip" title="Các ngày trong tuần buổi này được áp dụng">Ngày áp dụng</th><th data-toggle="tooltip" title="Thời điểm bắt đầu tính đúng giờ">Giờ mở</th><th data-toggle="tooltip" title="Thời điểm kết thúc tính đúng giờ">Giờ đóng</th><th>Xem báo cáo</th><th></th>
+</tr>
+</thead>
+<tbody>
+{% for s in all_sessions %}
+<tr>
+<td>{{ s.name }}</td>
+<td>{{ s.day_list() | join(', ') }}</td>
+<td>{{ s.open_time }}</td>
+<td>{{ s.close_time }}</td>
+<td>
+<form method="get" action="/reports" class="form-inline">
+<input type="hidden" name="session_id" value="{{s.id}}">
+<input type="hidden" name="report_from" value="{{ report_from or '' }}">
+<input type="hidden" name="report_to" value="{{ report_to or '' }}">
+<input type="hidden" name="f_id" value="{{f_id}}">
+<input type="hidden" name="f_dept" value="{{f_dept}}">
+<input type="hidden" name="f_status" value="{{f_status}}">
+<input type="hidden" name="f_from" value="{{f_from}}">
+<input type="hidden" name="f_to" value="{{f_to}}">
+<input type="hidden" name="active_tab" value="sessionreport">
+<button type="submit" class="btn btn-sm btn-outline-light" data-toggle="tooltip" title="Xem báo cáo đúng giờ/sớm/trễ/vắng của buổi này"><i class="fa fa-chart-bar mr-1"></i>Xem báo cáo</button>
+</form>
+</td>
+<td><a href="/sessions/delete/{{s.id}}?qs={{ current_qs_q }}" class="btn btn-sm btn-outline-danger" data-toggle="tooltip" title="Xoá vĩnh viễn buổi điểm danh này" onclick="return confirm('Xoá buổi {{s.name}}?');"><i class="fa fa-trash"></i></a></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary"><i class="fa fa-filter mr-2"></i>Lọc &amp; thao tác</div>
+<div class="card-body bg-dark">
+<form method="get" action="/reports" class="form-row align-items-end">
+<input type="hidden" name="session_id" value="{{ sel_session_id or '' }}">
+<input type="hidden" name="report_from" value="{{ report_from or '' }}">
+<input type="hidden" name="report_to" value="{{ report_to or '' }}">
+<input type="hidden" name="active_tab" value="sheet">
+<div class="form-group col-md-2">
+<label>ID/Tên</label>
+<input type="text" name="f_id" value="{{f_id}}" class="form-control form-control-sm">
+</div>
+<div class="form-group col-md-2">
+<label>Phòng ban</label>
+<input type="text" name="f_dept" value="{{f_dept}}" class="form-control form-control-sm">
+</div>
+<div class="form-group col-md-2">
+<label>Trạng thái</label>
+<select name="f_status" class="form-control form-control-sm">
+<option value="">Tất cả</option>
+{% for st in statuses %}
+<option value="{{st}}" {% if f_status==st %}selected{% endif %}>{{st}}</option>
+{% endfor %}
+</select>
+</div>
+<div class="form-group col-md-2">
+<label>Từ ngày</label>
+<input type="date" name="f_from" value="{{f_from}}" class="form-control form-control-sm">
+</div>
+<div class="form-group col-md-2">
+<label>Đến ngày</label>
+<input type="date" name="f_to" value="{{f_to}}" class="form-control form-control-sm">
+</div>
+<div class="form-group col-md-2">
+<button type="submit" class="btn btn-outline-light btn-sm btn-block"><i class="fa fa-search mr-1"></i>Lọc</button>
+</div>
+</form>
+<div class="btn-group mt-2" role="group">
+<a href="/downloadToday" type="button" class="btn btn-outline-light btn-sm" data-toggle="tooltip" title="Tải file CSV chỉ chứa dữ liệu hôm nay"><i class="fa fa-download mr-1"></i>Tải hôm nay</a>
+<a href="/downloadAll" type="button" class="btn btn-outline-light btn-sm" data-toggle="tooltip" title="Tải toàn bộ file CSV chấm công"><i class="fa fa-download mr-1"></i>Tải tất cả</a>
+<a href="/reports/export?type=sheet&{{ current_qs }}" type="button" class="btn btn-outline-success btn-sm" data-toggle="tooltip" title="Xuất báo cáo CSV theo đúng bộ lọc đang áp dụng"><i class="fa fa-file-export mr-1"></i>Xuất báo cáo</a>
+<button type="button" class="btn btn-outline-info btn-sm" onclick="window.print()" data-toggle="tooltip" title="In báo cáo dạng văn bản trường học"><i class="fa fa-print mr-1"></i>In báo cáo</button>
+<button data-toggle="modal" data-target="#rst1" type="button" class="btn btn-outline-danger btn-sm" title="Xoá vĩnh viễn dữ liệu chấm công hôm nay"><i class="fa fa-trash mr-1"></i>Xoá hôm nay</button>
+</div>
+</div>
+</div>
+<div class="modal fade" id="rst1" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal-dialog" role="document">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="exampleModalLabel">Bạn có chắc chắn không</h5>
+<button type="button" class="close" data-dismiss="modal" aria-label="Đóng"><span aria-hidden="true">&times;</span></button>
+</div>
+<div class="modal-body text-danger">Toàn bộ dữ liệu chấm công hôm nay sẽ bị xoá vĩnh viễn. Hành động này không thể hoàn tác.</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-secondary" data-dismiss="modal">Huỷ</button>
+<a href="/resetToday?qs={{ current_qs_q }}" type="button" class="btn btn-danger">Xoá</a>
+</div>
+</div>
+</div>
+</div>
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary"><i class="fa fa-table mr-2"></i>Danh sách chấm công</div>
+<div class="card-body bg-dark p-2">
+{% if allrows|length == 0 %}
+<div class="alert alert-dark mb-0">Không có dữ liệu</div>
+{% else %}
+<table id="entries" class="table table-dark table-striped nowrap responsive mb-0" style="width: 100%;">
+<thead>
+<tr align="center">
+<th></th>
+<th>Id</th><th data-toggle="tooltip" title="Tên nhân viên">Tên</th><th data-toggle="tooltip" title="Phòng ban trực thuộc">{{ role_dept_label }}</th><th data-toggle="tooltip" title="Thời điểm chấm công">Giờ</th><th data-toggle="tooltip" title="Ngày chấm công">Ngày</th><th data-toggle="tooltip" title="Trạng thái chấm công lúc ghi nhận">Trạng thái</th>
+</tr>
+</thead>
+<tbody>
+{% for row in allrows %}
+<tr align="center">
+<th scope="row">{{loop.index}}</th>
+<td>{{row.Id}}</td><td>{{row.Name}}</td><td>{{row.Department}}</td><td>{{row.Time}}</td><td>{{row.Date}}</td><td>{{row['Trạng thái']}}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+</div>
+<div class="tab-pane fade{% if active_tab=='sessionreport' %} show active{% endif %}" id="tab-sessionreport" role="tabpanel">
+{% if not report_session %}
+<div class="alert alert-dark mb-0">Chọn một buổi trong tab "Bảng điểm danh" và bấm "Xem báo cáo" để hiển thị ở đây.</div>
+{% else %}
+<div class="card bg-secondary section-card p-3 mb-4">
+<div class="d-flex justify-content-between align-items-start flex-wrap">
+<h6><i class="fa fa-calendar-check mr-2"></i>{{ report_session.name }}</h6>
+</div>
+<form method="get" action="/reports" class="form-inline mb-2">
+<input type="hidden" name="session_id" value="{{ report_session.id }}">
+<input type="hidden" name="f_id" value="{{f_id}}">
+<input type="hidden" name="f_dept" value="{{f_dept}}">
+<input type="hidden" name="f_status" value="{{f_status}}">
+<input type="hidden" name="f_from" value="{{f_from}}">
+<input type="hidden" name="f_to" value="{{f_to}}">
+<input type="hidden" name="active_tab" value="sessionreport">
+<label class="mr-2" data-toggle="tooltip" title="Ngày bắt đầu của khoảng cần xem báo cáo"><i class="fa fa-calendar-alt mr-1"></i>Từ ngày:</label>
+<input type="date" name="report_from" value="{{ report_from }}" class="form-control mr-2">
+<label class="mr-2" data-toggle="tooltip" title="Ngày kết thúc của khoảng cần xem báo cáo"><i class="fa fa-calendar-alt mr-1"></i>Đến ngày:</label>
+<input type="date" name="report_to" value="{{ report_to }}" class="form-control mr-2">
+<button type="submit" class="btn btn-outline-light btn-sm" data-toggle="tooltip" title="Áp dụng khoảng ngày đã chọn để xem báo cáo"><i class="fa fa-search mr-1"></i>Xem</button>
+<a href="/reports/export?type=sessionreport&session_id={{ report_session.id }}&report_from={{ report_from }}&report_to={{ report_to }}" class="btn btn-outline-success btn-sm" data-toggle="tooltip" title="Xuất báo cáo buổi này ra CSV theo đúng khoảng ngày đang xem"><i class="fa fa-file-export mr-1"></i>Xuất báo cáo</a>
+<button type="button" class="btn btn-outline-info btn-sm" onclick="window.print()" data-toggle="tooltip" title="In báo cáo buổi này dạng văn bản trường học"><i class="fa fa-print mr-1"></i>In báo cáo</button>
+</form>
+<p class="mb-1"><i class="fa fa-clock mr-1"></i>Khung giờ hợp lệ: <b>{{ report_session.open_time }} — {{ report_session.close_time }}</b></p>
+<p class="mb-0"><i class="fa fa-calendar-week mr-1"></i>Ngày áp dụng: <b>{{ report_session.day_list() | join(', ') }}</b></p>
+</div>
+<div class="row mt-2">
+<div class="col-md-3">
+<div class="card bg-success text-white mb-3 stat-card" data-toggle="tooltip" title="Tổng số lượt điểm danh trong khung giờ hợp lệ, cộng dồn toàn bộ khoảng ngày đang xem">
+<div class="card-body text-center">
+<i class="fa fa-check-circle fa-2x mb-2"></i>
+<h6 class="card-title mb-0">Tổng đúng giờ</h6>
+<h2>{{ sess_totals.on_time }}</h2>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card bg-warning text-dark mb-3 stat-card" data-toggle="tooltip" title="Tổng số lượt điểm danh trước giờ mở cổng, cộng dồn toàn bộ khoảng ngày đang xem">
+<div class="card-body text-center">
+<i class="fa fa-hourglass-start fa-2x mb-2"></i>
+<h6 class="card-title mb-0">Tổng đến sớm</h6>
+<h2>{{ sess_totals.early }}</h2>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card bg-info text-white mb-3 stat-card" data-toggle="tooltip" title="Tổng số lượt điểm danh sau giờ đóng cổng, cộng dồn toàn bộ khoảng ngày đang xem">
+<div class="card-body text-center">
+<i class="fa fa-hourglass-end fa-2x mb-2"></i>
+<h6 class="card-title mb-0">Tổng đến trễ</h6>
+<h2>{{ sess_totals.late }}</h2>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card bg-danger text-white mb-3 stat-card" data-toggle="tooltip" title="Tổng số lượt nhân viên không điểm danh trong buổi, cộng dồn toàn bộ khoảng ngày đang xem">
+<div class="card-body text-center">
+<i class="fa fa-user-times fa-2x mb-2"></i>
+<h6 class="card-title mb-0">Tổng chưa điểm danh</h6>
+<h2>{{ sess_totals.absent }}</h2>
+</div>
+</div>
+</div>
+</div>
+<div class="row mt-2">
+<div class="col-md-6">
+<div class="card bg-primary text-white mb-3 stat-card" data-toggle="tooltip" title="Số lượt đúng giờ chia cho tổng số lượt (đúng giờ + sớm + trễ + chưa điểm danh) trong khoảng ngày đang xem">
+<div class="card-body text-center">
+<i class="fa fa-percentage fa-2x mb-2"></i>
+<h6 class="card-title mb-0">Tỉ lệ có mặt</h6>
+<h2>{{ sess_rate }}%</h2>
+</div>
+</div>
+</div>
+<div class="col-md-6">
+<div class="card bg-secondary text-white mb-3 stat-card" data-toggle="tooltip" title="Tổng số lượt điểm danh (đúng giờ + sớm + trễ + chưa điểm danh) trong khoảng ngày đang xem, dùng làm mẫu số tính tỉ lệ">
+<div class="card-body text-center">
+<i class="fa fa-list-ol fa-2x mb-2"></i>
+<h6 class="card-title mb-0">Tổng lượt điểm danh</h6>
+<h2>{{ sess_total_all }}</h2>
+</div>
+</div>
+</div>
+</div>
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary" data-toggle="tooltip" title="So sánh số lượt đúng giờ, đến sớm, đến trễ và chưa điểm danh của từng phòng ban trong khoảng ngày đang xem"><i class="fa fa-table mr-2"></i>So sánh theo phòng ban</div>
+<div class="card-body bg-dark p-2">
+{% if sess_dept_rows|length == 0 %}
+<div class="alert alert-dark mb-0">Không có dữ liệu điểm danh trong khoảng ngày đã chọn.</div>
+{% else %}
+<table class="table table-dark table-striped mb-0">
+<thead><tr align="center"><th>{{ role_dept_label }}</th><th>Có mặt</th><th>Đến sớm</th><th>Đến trễ</th><th>Vắng mặt</th><th>Tổng</th><th>Tỉ lệ có mặt</th></tr></thead>
+<tbody>
+{% for r in sess_dept_rows %}
+<tr align="center"><td>{{ r.department }}</td><td>{{ r.on_time }}</td><td>{{ r.early }}</td><td>{{ r.late }}</td><td>{{ r.absent }}</td><td>{{ r.total }}</td><td>{{ r.rate }}%</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary" data-toggle="tooltip" title="Tỉ lệ phần trăm giữa đúng giờ, đến sớm, đến trễ và chưa điểm danh, cộng dồn toàn bộ khoảng ngày đang xem"><i class="fa fa-table mr-2"></i>Tỉ lệ trạng thái điểm danh</div>
+<div class="card-body bg-dark p-2">
+{% if sess_total_all == 0 %}
+<div class="alert alert-dark mb-0">Không có dữ liệu.</div>
+{% else %}
+<table class="table table-dark table-striped mb-0">
+<thead><tr align="center"><th>Trạng thái</th><th>Số lượt</th><th>Tỉ lệ</th></tr></thead>
+<tbody>
+{% for r in sess_status_rows %}
+<tr align="center"><td>{{ r.label }}</td><td>{{ r.count }}</td><td>{{ r.percent }}%</td></tr>
+{% endfor %}
+<tr align="center"><td><b>Tổng</b></td><td><b>{{ sess_total_all }}</b></td><td><b>100%</b></td></tr>
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary" data-toggle="tooltip" title="Số lượt đúng giờ, đến sớm, đến trễ và chưa điểm danh theo từng ngày trong khoảng đang xem"><i class="fa fa-table mr-2"></i>Xu hướng theo ngày</div>
+<div class="card-body bg-dark p-2">
+{% if sess_daily_rows|length == 0 %}
+<div class="alert alert-dark mb-0">Không có dữ liệu.</div>
+{% else %}
+<table class="table table-dark table-striped mb-0">
+<thead><tr align="center"><th>Ngày</th><th>Có mặt</th><th>Đến sớm</th><th>Đến trễ</th><th>Vắng mặt</th><th>Tổng</th></tr></thead>
+<tbody>
+{% for r in sess_daily_rows %}
+<tr align="center"><td>{{ r.date }}</td><td>{{ r.on_time }}</td><td>{{ r.early }}</td><td>{{ r.late }}</td><td>{{ r.absent }}</td><td>{{ r.total }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary" data-toggle="tooltip" title="Tổng hợp số lượt đúng giờ/sớm/trễ/chưa điểm danh của từng nhân viên, cộng dồn toàn bộ khoảng ngày đang xem"><i class="fa fa-users mr-2"></i>Tổng hợp theo nhân viên</div>
+<div class="card-body bg-dark p-2">
+{% if sess_emp_rows|length == 0 %}
+<div class="alert alert-dark mb-0">Không có dữ liệu điểm danh trong khoảng ngày đã chọn.</div>
+{% else %}
+<table id='sessEmpTable' class="table table-dark table-striped mb-0">
+<thead>
+<tr align="center">
+<th data-toggle="tooltip" title="Mã nhân viên">Id</th>
+<th data-toggle="tooltip" title="Họ tên nhân viên">Tên</th>
+<th data-toggle="tooltip" title="Phòng ban hoặc môn học tuỳ vai trò">{{ role_dept_label }}</th>
+<th data-toggle="tooltip" title="Số lần điểm danh trong khung giờ hợp lệ">Có mặt</th>
+<th data-toggle="tooltip" title="Số lần điểm danh trước giờ mở cổng">Đến sớm</th>
+<th data-toggle="tooltip" title="Số lần điểm danh sau giờ đóng cổng">Đến trễ</th>
+<th data-toggle="tooltip" title="Số lần không điểm danh trong buổi">Vắng mặt</th>
+</tr>
+</thead>
+<tbody>
+{% for r in sess_emp_rows %}
+<tr align="center">
+<td>{{ r.id }}</td>
+<td>{{ r.name }}</td>
+<td>{{ r.department }}</td>
+<td>{{ r.on_time }}</td>
+<td>{{ r.early }}</td>
+<td>{{ r.late }}</td>
+<td>{{ r.absent }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+{% if report_days|length == 0 %}
+<div class="alert alert-dark mb-0">Không có ngày nào phù hợp bộ lọc.</div>
+{% endif %}
+{% for day in report_days %}
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary"><i class="fa fa-calendar-check mr-2"></i>{{ day.date_display }} ({{ day.weekday_label }})</div>
+<div class="card-body bg-dark">
+<div class="row mt-2">
+<div class="col-md-3">
+<div class="card bg-success text-white mb-3 stat-card" data-toggle="tooltip" title="Điểm danh trong khung giờ hợp lệ của buổi">
+<div class="card-body text-center">
+<i class="fa fa-check-circle fa-2x mb-2"></i>
+<h6 class="card-title mb-0">Có mặt</h6>
+<h2>{{ day.on_time|length }}</h2>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card bg-warning text-dark mb-3 stat-card" data-toggle="tooltip" title="Điểm danh trước giờ mở cổng">
+<div class="card-body text-center">
+<i class="fa fa-hourglass-start fa-2x mb-2"></i>
+<h6 class="card-title mb-0">Đến sớm</h6>
+<h2>{{ day.early|length }}</h2>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card bg-info text-white mb-3 stat-card" data-toggle="tooltip" title="Điểm danh sau giờ đóng cổng">
+<div class="card-body text-center">
+<i class="fa fa-hourglass-end fa-2x mb-2"></i>
+<h6 class="card-title mb-0">Đến trễ</h6>
+<h2>{{ day.late|length }}</h2>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card bg-danger text-white mb-3 stat-card" data-toggle="tooltip" title="Không có dữ liệu điểm danh trong ngày này">
+<div class="card-body text-center">
+<i class="fa fa-times-circle fa-2x mb-2"></i>
+<h6 class="card-title mb-0">Vắng mặt</h6>
+<h2>{{ day.absent|length }}</h2>
+</div>
+</div>
+</div>
+</div>
+<div class="row">
+<div class="col-md-6">
+<div class="card section-card mb-4">
+<div class="card-header bg-warning text-dark"><i class="fa fa-hourglass-start mr-2"></i>Đến sớm hơn {{ report_session.open_time }}</div>
+<div class="card-body bg-dark p-2">
+{% if day.early|length == 0 %}
+<p class="text-muted mb-0 p-2">Không có ai.</p>
+{% else %}
+<table class="table table-dark table-sm table-striped mb-0">
+<thead><tr><th>ID</th><th>Tên</th><th>{{ role_dept_label }}</th><th data-toggle="tooltip" title="Thời điểm điểm danh được ghi nhận">Giờ vào</th></tr></thead>
+<tbody>
+{% for emp, t in day.early %}
+<tr><td>{{emp.id}}</td><td>{{emp.name}}</td><td>{{emp.department}}</td><td>{{t}}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+</div>
+<div class="col-md-6">
+<div class="card section-card mb-4">
+<div class="card-header bg-info text-white"><i class="fa fa-hourglass-end mr-2"></i>Đến trễ hơn {{ report_session.close_time }}</div>
+<div class="card-body bg-dark p-2">
+{% if day.late|length == 0 %}
+<p class="text-muted mb-0 p-2">Không có ai.</p>
+{% else %}
+<table class="table table-dark table-sm table-striped mb-0">
+<thead><tr><th>ID</th><th>Tên</th><th>{{ role_dept_label }}</th><th data-toggle="tooltip" title="Thời điểm điểm danh được ghi nhận">Giờ vào</th></tr></thead>
+<tbody>
+{% for emp, t in day.late %}
+<tr><td>{{emp.id}}</td><td>{{emp.name}}</td><td>{{emp.department}}</td><td>{{t}}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+</div>
+</div>
+<div class="row">
+<div class="col-md-6">
+<div class="card section-card mb-4">
+<div class="card-header bg-danger text-white"><i class="fa fa-times-circle mr-2"></i>Vắng mặt</div>
+<div class="card-body bg-dark p-2">
+{% if day.absent|length == 0 %}
+<p class="text-muted mb-0 p-2">Ai cũng đã điểm danh.</p>
+{% else %}
+<table class="table table-dark table-sm table-striped mb-0">
+<thead><tr><th>ID</th><th>Tên</th><th>{{ role_dept_label }}</th></tr></thead>
+<tbody>
+{% for emp in day.absent %}
+<tr><td>{{emp.id}}</td><td>{{emp.name}}</td><td>{{emp.department}}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+</div>
+<div class="col-md-6">
+<div class="card section-card mb-4">
+<div class="card-header bg-success text-white"><i class="fa fa-check-circle mr-2"></i>Có mặt</div>
+<div class="card-body bg-dark p-2">
+{% if day.on_time|length == 0 %}
+<p class="text-muted mb-0 p-2">Chưa có ai.</p>
+{% else %}
+<table class="table table-dark table-sm table-striped mb-0">
+<thead><tr><th>ID</th><th>Tên</th><th>{{ role_dept_label }}</th><th data-toggle="tooltip" title="Thời điểm điểm danh được ghi nhận">Giờ vào</th></tr></thead>
+<tbody>
+{% for emp, t in day.on_time %}
+<tr><td>{{emp.id}}</td><td>{{emp.name}}</td><td>{{emp.department}}</td><td>{{t}}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+{% endfor %}
+{% endif %}
+</div>
+<div class="tab-pane fade{% if active_tab=='health' %} show active{% endif %}" id="tab-health" role="tabpanel">
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary"><i class="fa fa-filter mr-2"></i>Lọc theo tình trạng</div>
+<div class="card-body bg-dark">
+<form method="get" action="/reports" class="form-inline">
+<input type="hidden" name="session_id" value="{{ sel_session_id or '' }}">
+<input type="hidden" name="report_from" value="{{ report_from or '' }}">
+<input type="hidden" name="report_to" value="{{ report_to or '' }}">
+<input type="hidden" name="f_id" value="{{f_id}}">
+<input type="hidden" name="f_dept" value="{{f_dept}}">
+<input type="hidden" name="f_status" value="{{f_status}}">
+<input type="hidden" name="f_from" value="{{f_from}}">
+<input type="hidden" name="f_to" value="{{f_to}}">
+<input type="hidden" name="active_tab" value="health">
+<label class="mr-2" data-toggle="tooltip" title="Chỉ hiển thị nhân viên có trạng thái sức khoẻ tổng hợp đang chọn"><i class="fa fa-notes-medical mr-1"></i>Tình trạng:</label>
+<select name="f_health_status" class="form-control mr-2">
+<option value="">Tất cả</option>
+{% for key, meta in health_status_meta.items() %}
+<option value="{{key}}"{% if f_health_status==key %} selected{% endif %}>{{meta.label}}</option>
+{% endfor %}
+</select>
+<button type="submit" class="btn btn-outline-light btn-sm" data-toggle="tooltip" title="Áp dụng bộ lọc tình trạng đã chọn"><i class="fa fa-search mr-1"></i>Lọc</button>
+<a href="/reports/export?type=health&{{ current_qs }}" class="btn btn-outline-success btn-sm ml-2" data-toggle="tooltip" title="Xuất báo cáo sức khỏe CSV theo đúng bộ lọc đang áp dụng"><i class="fa fa-file-export mr-1"></i>Xuất báo cáo sức khỏe</a>
+<button type="button" class="btn btn-outline-info btn-sm ml-2" onclick="window.print()" data-toggle="tooltip" title="In báo cáo sức khỏe dạng văn bản trường học"><i class="fa fa-print mr-1"></i>In báo cáo</button>
+</form>
+</div>
+</div>
+<div class="card section-card mb-4 border-danger">
+<div class="card-header bg-danger text-white" data-toggle="tooltip" title="Danh sách trạng thái sức khoẻ ở mức Cần theo dõi hoặc Nguy hiểm, cần thông báo cho giáo viên/quản lý phụ trách"><i class="fa fa-exclamation-triangle mr-2"></i>Cảnh báo chỉ số bất thường</div>
+<div class="card-body bg-dark p-2">
+{% set alert_rows = health_rows | selectattr('overall_status', 'in', ['warning','danger']) | list %}
+{% if alert_rows|length == 0 %}
+<p class="text-muted mb-0 p-2">Không có cảnh báo nào.</p>
+{% else %}
+<table class="table table-dark table-sm table-striped mb-0">
+<thead><tr><th>Id</th><th>Tên</th><th>Nhịp tim</th><th>SpO₂</th><th>Nhiệt độ</th><th>Trạng thái</th></tr></thead>
+<tbody>
+{% for row in alert_rows %}
+<tr>
+<td>{{row.employee.id}}</td>
+<td>{{row.employee.name}}</td>
+<td>{% if row.heart_rate is not none %}{{row.heart_rate}} bpm{% else %}--{% endif %}</td>
+<td>{% if row.spo2 is not none %}{{row.spo2}}%{% else %}--{% endif %}</td>
+<td>{% if row.temperature is not none %}{{row.temperature}}°C{% else %}--{% endif %}</td>
+<td><span class="badge badge-{{ health_status_meta[row.overall_status].color }}">{{ health_status_meta[row.overall_status].label }}</span></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+{% set health_good = health_rows | selectattr('overall_status','equalto','good') | list | length %}
+{% set health_normal = health_rows | selectattr('overall_status','equalto','normal') | list | length %}
+{% set health_warning = health_rows | selectattr('overall_status','equalto','warning') | list | length %}
+{% set health_danger = health_rows | selectattr('overall_status','equalto','danger') | list | length %}
+{% set health_unknown = health_rows | selectattr('overall_status','equalto','unknown') | list | length %}
+{% set health_total = health_rows | length %}
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary" data-toggle="tooltip" title="Tỉ lệ phần trăm các mức trạng thái sức khỏe"><i class="fa fa-table mr-2"></i>Tỉ lệ trạng thái sức khỏe</div>
+<div class="card-body bg-dark p-2">
+{% if health_total == 0 %}
+<div class="alert alert-dark mb-0">Không có dữ liệu.</div>
+{% else %}
+<table class="table table-dark table-striped mb-0">
+<thead><tr align="center"><th>Trạng thái</th><th>Số lượng</th><th>Tỉ lệ</th></tr></thead>
+<tbody>
+<tr align="center"><td>Tốt</td><td>{{ health_good }}</td><td>{{ (health_good / health_total * 100) | round(1) }}%</td></tr>
+<tr align="center"><td>Bình thường</td><td>{{ health_normal }}</td><td>{{ (health_normal / health_total * 100) | round(1) }}%</td></tr>
+<tr align="center"><td>Cần theo dõi</td><td>{{ health_warning }}</td><td>{{ (health_warning / health_total * 100) | round(1) }}%</td></tr>
+<tr align="center"><td>Nguy hiểm</td><td>{{ health_danger }}</td><td>{{ (health_danger / health_total * 100) | round(1) }}%</td></tr>
+<tr align="center"><td>Chưa có dữ liệu</td><td>{{ health_unknown }}</td><td>{{ (health_unknown / health_total * 100) | round(1) }}%</td></tr>
+<tr align="center"><td><b>Tổng</b></td><td><b>{{ health_total }}</b></td><td><b>100%</b></td></tr>
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+<div class="card section-card mb-4">
+<div class="card-header bg-secondary" data-toggle="tooltip" title="Chỉ số sức khoẻ ghi nhận gần nhất của từng nhân viên/học sinh"><i class="fa fa-heartbeat mr-2"></i>Báo cáo sức khỏe học sinh</div>
+<div class="card-body bg-dark p-2">
+{% if health_rows|length == 0 %}
+<div class="alert alert-dark mb-0">Chưa có nhân viên nào được đăng ký.</div>
+{% else %}
+<table class="table table-dark table-striped mb-0">
+<thead>
+<tr align="center">
+<th></th>
+<th>Id</th>
+<th>Tên</th>
+<th data-toggle="tooltip" title="Nhịp tim đo được, đơn vị lần/phút (bpm)"><i class="fa fa-heartbeat mr-1"></i>Nhịp tim</th>
+<th data-toggle="tooltip" title="Nồng độ oxy trong máu, đơn vị %"><i class="fa fa-tint mr-1"></i>SpO₂</th>
+<th data-toggle="tooltip" title="Nhiệt độ cơ thể, đơn vị °C"><i class="fa fa-thermometer-half mr-1"></i>Nhiệt độ</th>
+<th data-toggle="tooltip" title="Trạng thái sức khoẻ tổng hợp từ các chỉ số trên">Trạng thái</th>
+</tr>
+</thead>
+<tbody>
+{% for row in health_rows %}
+<tr align="center">
+<th scope="row">{{loop.index}}</th>
+<td>{{row.employee.id}}</td>
+<td>{{row.employee.name}}</td>
+<td>
+<span class="badge badge-{{ health_status_meta[row.hr_status].color }}" data-toggle="tooltip" title="Nhịp tim bình thường: 60–100 bpm">
+<i class="fa {{ health_status_meta[row.hr_status].icon }} mr-1"></i>
+{% if row.heart_rate is not none %}{{ row.heart_rate }} bpm{% else %}--{% endif %}
+</span>
+</td>
+<td>
+<span class="badge badge-{{ health_status_meta[row.spo2_status].color }}" data-toggle="tooltip" title="SpO₂ bình thường: từ 95% trở lên">
+<i class="fa {{ health_status_meta[row.spo2_status].icon }} mr-1"></i>
+{% if row.spo2 is not none %}{{ row.spo2 }}%{% else %}--{% endif %}
+</span>
+</td>
+<td>
+<span class="badge badge-{{ health_status_meta[row.temp_status].color }}" data-toggle="tooltip" title="Nhiệt độ bình thường: 36.1–37.2°C">
+<i class="fa {{ health_status_meta[row.temp_status].icon }} mr-1"></i>
+{% if row.temperature is not none %}{{ row.temperature }}°C{% else %}--{% endif %}
+</span>
+</td>
+<td>
+<span class="badge badge-{{ health_status_meta[row.overall_status].color }}" data-toggle="tooltip" title="Trạng thái xấu nhất trong 3 chỉ số nhịp tim, SpO₂, nhiệt độ">
+<i class="fa {{ health_status_meta[row.overall_status].icon }} mr-1"></i>
+{{ health_status_meta[row.overall_status].label }}
+</span>
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+</div>
+</div>
+</div>
+</div>
+</div>
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.2/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/dataTables.responsive.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/plug-ins/1.10.15/dataRender/datetime.js"></script>
+</body>
+<script type="text/javascript">
+var entriesTable = $('#entries').DataTable();
+var sessEmpTable = $('#sessEmpTable').length ? $('#sessEmpTable').DataTable() : null;
+$('[data-toggle="tooltip"]').tooltip();
+$('#tab-sheet-btn').on('shown.bs.tab', function () {
+entriesTable.columns.adjust();
+});
+</script>
+</html>

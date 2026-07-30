@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <title>Buổi điểm danh</title>
+    <link rel="icon" type="image/x-icon" href="static/icon3.png">
+</head>
+
+<style>
+    .log { color: white; text-decoration: none; }
+    .log:hover { color: blue; text-decoration: none; }
+    .section-card { border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; }
+    .section-card .card-header { border-radius: 10px 10px 0 0; font-weight: 600; }
+</style>
+
+<body class="bg-dark" style="min-height: 100vh;">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+        <a class="navbar-brand" href="/"><img src="static/icon3.png" width="35" class="d-inline-block align-top" alt="logo"></a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li><h6 style="color: white;"><i class="fa fa-calendar-check mr-2"></i>Buổi điểm danh (theo ngày trong tuần)</h6></li>
+            </ul>
+            <div class="form-inline my-2 my-lg-0">
+                <a href="/AttendanceSheet" class="mr-4 mt-2 log"><h6>Bảng điểm danh</h6></a>
+                <a href="/" class="mr-4 mt-2 log"><h6>Home</h6></a>
+                <a href="/logout" class="mr-4 mt-2 log"><h6>Logout</h6></a>
+                <h6 class="my-2 my-sm-0" style="color: white;">Hey, {{current_user.username}}</h6>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 text-white">
+
+        <div class="card section-card mb-4">
+            <div class="card-header bg-secondary">
+                <i class="fa fa-plus-circle mr-2"></i>Tạo buổi điểm danh mới
+            </div>
+            <div class="card-body bg-dark">
+                <p class="text-muted">
+                    Chọn các ngày trong tuần áp dụng + khung giờ mở/đóng cổng điểm danh.
+                    Ai điểm danh trước giờ mở, sau giờ đóng, hoặc không điểm danh trong
+                    ngày sẽ hiện trong báo cáo riêng của buổi đó.
+                </p>
+
+                {% if error %}
+                <div class="alert alert-danger"><i class="fa fa-exclamation-triangle mr-1"></i>{{ error }}</div>
+                {% endif %}
+
+                <form method="post" action="/sessions">
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label><i class="fa fa-tag mr-1"></i>Tên buổi</label>
+                            <input type="text" class="form-control" name="name" placeholder="VD: Buổi sáng" required>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label><i class="fa fa-door-open mr-1"></i>Giờ mở cổng</label>
+                            <input type="time" class="form-control" name="open_time" required>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label><i class="fa fa-door-closed mr-1"></i>Giờ đóng cổng</label>
+                            <input type="time" class="form-control" name="close_time" required>
+                        </div>
+                        <div class="form-group col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-dark btn-block"><i class="fa fa-save mr-1"></i>Tạo buổi</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa fa-calendar-week mr-1"></i>Áp dụng cho các ngày</label><br>
+                        {% for code in weekday_codes %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="days" value="{{code}}" id="day{{code}}">
+                            <label class="form-check-label" for="day{{code}}">{{ weekday_labels[code] }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card section-card mb-4">
+            <div class="card-header bg-secondary">
+                <i class="fa fa-list mr-2"></i>Danh sách buổi đã tạo
+            </div>
+            <div class="card-body bg-dark p-2">
+                {% if all_sessions|length == 0 %}
+                <div class="alert alert-dark mb-0">Chưa có buổi điểm danh nào.</div>
+                {% else %}
+                <table class="table table-dark table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th><i class="fa fa-tag mr-1"></i>Tên buổi</th>
+                            <th><i class="fa fa-calendar-week mr-1"></i>Ngày áp dụng</th>
+                            <th><i class="fa fa-door-open mr-1"></i>Giờ mở</th>
+                            <th><i class="fa fa-door-closed mr-1"></i>Giờ đóng</th>
+                            <th>Xem báo cáo theo ngày</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in all_sessions %}
+                        <tr>
+                            <td>{{ s.name }}</td>
+                            <td>{{ s.day_list() | join(', ') }}</td>
+                            <td>{{ s.open_time }}</td>
+                            <td>{{ s.close_time }}</td>
+                            <td>
+                                <form method="get" action="/sessions/{{s.id}}/report" class="form-inline">
+                                    <input type="date" name="date" class="form-control form-control-sm mr-2">
+                                    <button type="submit" class="btn btn-sm btn-outline-light"><i class="fa fa-chart-bar mr-1"></i>Xem báo cáo</button>
+                                </form>
+                            </td>
+                            <td>
+                                <a href="/sessions/delete/{{s.id}}" class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Xoá buổi {{s.name}}?');"><i class="fa fa-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+</body>
+
+</html>
