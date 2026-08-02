@@ -8,12 +8,13 @@
     integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/3.3.0/mdb.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
-  <title>Thêm nhân viên</title>
+  <title>Thêm học sinh/giáo viên</title>
   <link rel="icon" type="image/x-icon" href="static/icon3.png">
 </head>
 <body>
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <a class="navbar-brand" href="/"><img src="static/icon3.png" width="35" class="d-inline-block align-top" alt="logo"></a>
+    {% if school_name %}<span class="navbar-text text-white mr-4"><b>{{ school_name }}</b></span>{% endif %}
     <div class="collapse navbar-collapse">
       <div class="form-inline my-2 my-lg-0">
         <a href="/" class="mr-4 text-white"><h6>Trang chủ</h6></a>
@@ -26,7 +27,7 @@
   </nav>
 
   <div class="container my-5">
-    <h2 class="mb-4">Thêm nhân viên mới (Giáo viên / Học sinh)</h2>
+    <h2 class="mb-4">Thêm học sinh/giáo viên mới</h2>
 
     {% if photo_error %}
     <p style="color:red"><b>{{ photo_error }}</b></p>
@@ -38,7 +39,7 @@
     {% elif invalid == 3 %}
     <p style="color:red"><b>Mật khẩu không khớp hoặc chưa đủ 8 ký tự.</b></p>
     {% elif invalid == 4 %}
-    <p style="color:red"><b>Không gửi được email OTP. Vui lòng thử lại sau.</b></p>
+    <p style="color:red"><b>Không tạo được tài khoản. Vui lòng thử lại sau.</b></p>
     {% endif %}
 
     <form method="post" enctype="multipart/form-data" id="addForm">
@@ -90,10 +91,10 @@
             <button type="button" class="btn btn-outline-dark btn-sm" id="btnCamera">Chụp ảnh</button>
           </div>
           <div id="uploadBox">
-            <input type="file" class="form-control-file" name="photo" accept="image/png, image/jpeg, image/bmp, image/webp">
+            <input type="file" class="form-control-file" name="photo" accept="image/jpeg, image/png, .jpg, .jpeg, .png">
           </div>
           <div id="cameraBox" style="display:none;">
-            <img src="" width="100%" id="cameraStream">
+            <img width="100%" id="cameraStream" style="background:#000;min-height:240px;">
             <img id="capturedImg" width="100%" style="display:none;">
             <button type="button" class="btn btn-dark btn-sm mt-2" id="btnCapture">Chụp</button>
             <button type="button" class="btn btn-outline-dark btn-sm mt-2" id="btnRetake" style="display:none;">Chụp lại</button>
@@ -110,7 +111,7 @@
   </div>
 
   <div class="container my-5">
-    <h3 class="mb-3">Danh sách nhân sự</h3>
+    <h3 class="mb-3">Danh sách học sinh/giáo viên</h3>
     <table class="table table-bordered">
       <thead>
         <tr>
@@ -146,6 +147,22 @@
   </div>
 
   <script>
+    var ALLOWED_IMAGE_EXT = ['.jpg', '.jpeg', '.png'];
+    (function() {
+      var photoInput = document.querySelector('input[name="photo"]');
+      if (photoInput) {
+        photoInput.addEventListener('change', function() {
+          var file = photoInput.files && photoInput.files[0];
+          if (!file) return;
+          var name = file.name.toLowerCase();
+          var ok = ALLOWED_IMAGE_EXT.some(function(ext) { return name.endsWith(ext); });
+          if (!ok) {
+            alert('Invalid file type. Please upload a JPG, JPEG or PNG image.');
+            photoInput.value = '';
+          }
+        });
+      }
+    })();
     var CLASSES = {{ classes | map(attribute='name') | list | tojson }};
     var SUBJECTS = {{ subjects | map(attribute='name') | list | tojson }};
     function fillDept(role) {
@@ -168,12 +185,39 @@
     document.getElementById('btnUpload').addEventListener('click', function() {
       document.getElementById('uploadBox').style.display = '';
       document.getElementById('cameraBox').style.display = 'none';
-      document.getElementById('cameraStream').src = '';
+      document.getElementById('cameraStream').removeAttribute('src');
     });
     document.getElementById('btnCamera').addEventListener('click', function() {
       document.getElementById('uploadBox').style.display = 'none';
       document.getElementById('cameraBox').style.display = '';
-      document.getElementById('cameraStream').src = '/takePhoto?_=' + Date.now();
+      var streamImg = document.getElementById('cameraStream');
+      var statusEl = document.getElementById('captureStatus');
+      streamImg.style.display = 'none';
+      statusEl.innerText = '';
+      statusEl.style.color = '';
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        statusEl.innerText = 'Trình duyệt không hỗ trợ truy cập camera.';
+        statusEl.style.color = 'red';
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
+        stream.getTracks().forEach(function(track) { track.stop(); });
+        streamImg.style.display = 'block';
+        streamImg.onerror = function() {
+          statusEl.innerText = 'Không thể mở camera. Kiểm tra quyền truy cập camera hoặc camera đang được ứng dụng khác sử dụng.';
+          statusEl.style.color = 'red';
+        };
+        streamImg.src = '/takePhoto?_=' + Date.now();
+      }).catch(function(err) {
+        if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          statusEl.innerText = 'Không tìm thấy camera trên thiết bị này.';
+        } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.name === 'SecurityError') {
+          statusEl.innerText = 'Quyền truy cập camera đã bị từ chối. Vui lòng cấp quyền để tiếp tục.';
+        } else {
+          statusEl.innerText = 'Không thể mở camera. Kiểm tra quyền truy cập camera hoặc camera đang được ứng dụng khác sử dụng.';
+        }
+        statusEl.style.color = 'red';
+      });
     });
     document.getElementById('btnCapture').addEventListener('click', function() {
       var canvas = document.createElement('canvas');
