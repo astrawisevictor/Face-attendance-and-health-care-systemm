@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
     integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/3.3.0/mdb.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
   <title>Quản lý hệ thống</title>
   <link rel="icon" type="image/x-icon" href="static/icon3.png">
@@ -22,7 +21,7 @@
     <div class="form-inline my-2 my-lg-0">
       <a href="/" class="mr-4 text-white"><h6>Trang chủ</h6></a>
       <div class="dropdown mr-4 mt-2" style="margin-top:-4px;">
-        <h6 class="dropdown-toggle text-white" id="quanLyDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="cursor:pointer;">Quản lý</h6>
+        <h6 class="dropdown-toggle text-white" id="quanLyDropdown" aria-haspopup="true" aria-expanded="false" style="cursor:pointer;">Quản lý</h6>
         <div class="dropdown-menu" aria-labelledby="quanLyDropdown">
           <a class="dropdown-item" href="/registerEmployee"><i class="fa fa-user-plus mr-2"></i>Thêm nhân viên</a>
           <a class="dropdown-item" href="/manage?active_tab=student"><i class="fa fa-user-graduate mr-2"></i>Học sinh</a>
@@ -89,11 +88,11 @@
           <td>{{u.mail}}</td><td>{{emp.hiringDate if emp else ''}}</td>
           <td>{{status_labels.get(u.status,u.status)}}</td>
           <td>
-            <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target="#edit-{{u.id}}">Sửa</button>
-            <a class="btn btn-danger btn-sm" href="/accounts/delete/{{u.id}}?next=/manage%3Factive_tab%3Dstudent" onclick="return confirm('{{u.name|replace("'", "\\'")}} sẽ bị xoá vĩnh viễn. Tiếp tục?')">Xoá</a>
+            <button class="btn btn-primary btn-sm" type="button" data-edit-target="edit-{{u.id}}">Sửa</button>
+            <a class="btn btn-danger btn-sm" href="/accounts/delete/{{u.id}}?next=/manage%3Factive_tab%3Dstudent" data-confirm="{{u.name}} sẽ bị xoá vĩnh viễn. Tiếp tục?">Xoá</a>
           </td>
         </tr>
-        <tr class="collapse {{ 'show' if edit_uid==u.id }}" id="edit-{{u.id}}"><td colspan="7">
+        <tr class="collapse-row {{ 'show' if edit_uid==u.id }}" id="edit-{{u.id}}"><td colspan="7">
           <form method="post" action="/accounts/edit/{{u.id}}" enctype="multipart/form-data" class="form-row align-items-end">
             <input type="hidden" name="qs" value="active_tab=student">
             <div class="form-group col-md-2"><label>Tên đăng nhập</label><input class="form-control" name="username" value="{{u.username}}" required></div>
@@ -150,11 +149,11 @@
           <td>{{u.mail}}</td><td>{{emp.hiringDate if emp else ''}}</td>
           <td>{{status_labels.get(u.status,u.status)}}</td>
           <td>
-            <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target="#edit-{{u.id}}">Sửa</button>
-            <a class="btn btn-danger btn-sm" href="/accounts/delete/{{u.id}}?next=/manage%3Factive_tab%3Dteacher" onclick="return confirm('{{u.name|replace("'", "\\'")}} sẽ bị xoá vĩnh viễn. Tiếp tục?')">Xoá</a>
+            <button class="btn btn-primary btn-sm" type="button" data-edit-target="edit-{{u.id}}">Sửa</button>
+            <a class="btn btn-danger btn-sm" href="/accounts/delete/{{u.id}}?next=/manage%3Factive_tab%3Dteacher" data-confirm="{{u.name}} sẽ bị xoá vĩnh viễn. Tiếp tục?">Xoá</a>
           </td>
         </tr>
-        <tr class="collapse {{ 'show' if edit_uid==u.id }}" id="edit-{{u.id}}"><td colspan="7">
+        <tr class="collapse-row {{ 'show' if edit_uid==u.id }}" id="edit-{{u.id}}"><td colspan="7">
           <form method="post" action="/accounts/edit/{{u.id}}" enctype="multipart/form-data" class="form-row align-items-end">
             <input type="hidden" name="qs" value="active_tab=teacher">
             <div class="form-group col-md-2"><label>Tên đăng nhập</label><input class="form-control" name="username" value="{{u.username}}" required></div>
@@ -215,13 +214,13 @@
           <td>{{'Quản trị viên' if u.role=='admin' else role_labels.get(u.role,u.role)}}</td>
           <td>{{status_labels.get(u.status,u.status)}}</td><td>{{u.mail}}</td>
           <td>
-            <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target="#edit-acc-{{u.id}}">Sửa</button>
+            <button class="btn btn-primary btn-sm" type="button" data-edit-target="edit-acc-{{u.id}}">Sửa</button>
             {% if u.id != current_user.id %}
-            <a class="btn btn-danger btn-sm" href="/accounts/delete/{{u.id}}?next=/manage%3Factive_tab%3Daccounts" onclick="return confirm('{{u.name|replace("'", "\\'")}} sẽ bị xoá vĩnh viễn. Tiếp tục?')">Xoá</a>
+            <a class="btn btn-danger btn-sm" href="/accounts/delete/{{u.id}}?next=/manage%3Factive_tab%3Daccounts" data-confirm="{{u.name}} sẽ bị xoá vĩnh viễn. Tiếp tục?">Xoá</a>
             {% endif %}
           </td>
         </tr>
-        <tr class="collapse {{ 'show' if edit_uid==u.id }}" id="edit-acc-{{u.id}}"><td colspan="7">
+        <tr class="collapse-row {{ 'show' if edit_uid==u.id }}" id="edit-acc-{{u.id}}"><td colspan="7">
           <form method="post" action="/accounts/edit/{{u.id}}" enctype="multipart/form-data" class="form-row align-items-end">
             <input type="hidden" name="qs" value="active_tab=accounts">
             <div class="form-group col-md-2"><label>Tên đăng nhập</label><input class="form-control" name="username" value="{{u.username}}" required></div>
@@ -328,7 +327,7 @@
         <tbody>
         {% for c in classes_all %}
         <tr><td>{{c.grade or ''}}</td><td>{{c.name}}</td><td>
-          <form method="post" action="/classes" class="d-inline" onsubmit="return confirm('Xoá lớp {{c.name|replace("'", "\\'")}}?')">
+          <form method="post" action="/classes" class="d-inline" data-confirm="Xoá lớp {{c.name}}?">
             <input type="hidden" name="action" value="delete_class">
             <input type="hidden" name="class_id" value="{{c.id}}">
             <button type="submit" class="btn btn-danger btn-sm">Xoá</button>
@@ -361,7 +360,7 @@
         <tbody>
         {% for s in subjects_all %}
         <tr><td>{{s.name}}</td><td>
-          <form method="post" action="/classes" class="d-inline" onsubmit="return confirm('Xoá môn học {{s.name|replace("'", "\\'")}}?')">
+          <form method="post" action="/classes" class="d-inline" data-confirm="Xoá môn học {{s.name}}?">
             <input type="hidden" name="action" value="delete_subject">
             <input type="hidden" name="subject_id" value="{{s.id}}">
             <button type="submit" class="btn btn-danger btn-sm">Xoá</button>
@@ -409,7 +408,7 @@
         {% for a in assignments %}
         {% set t = teachers | selectattr('id','equalto',a.teacher_id) | list | first %}
         <tr><td>{{t.name if t else a.teacher_id}}</td><td>{{a.class_name}}</td><td>
-          <form method="post" action="/classes" class="d-inline" onsubmit="return confirm('Huỷ phân công này?')">
+          <form method="post" action="/classes" class="d-inline" data-confirm="Huỷ phân công này?">
             <input type="hidden" name="action" value="unassign">
             <input type="hidden" name="assignment_id" value="{{a.id}}">
             <button type="submit" class="btn btn-danger btn-sm">Huỷ</button>
@@ -443,14 +442,72 @@
   .photo-panel { border: 1px solid #e2e2e2; border-radius: 8px; padding: 12px; margin: 8px 2px 0; background: #fafafa; }
   .emp-form { background: #fff; }
   .emp-form .form-group { margin-bottom: .8rem; }
+  tr.collapse-row { display: none; }
+  tr.collapse-row.show { display: table-row; }
 </style>
 <script>
-  $('#manageTabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
-    var tab = e.target.id.replace('tablink-', '');
-    var url = new URL(window.location);
-    url.searchParams.set('active_tab', tab);
-    history.replaceState(null, '', url);
-  });
+  (function() {
+    var toggle = document.getElementById('quanLyDropdown');
+    if (toggle) {
+      var dropdown = toggle.closest('.dropdown');
+      var menu = dropdown.querySelector('.dropdown-menu');
+      var openMenu = function() { menu.classList.add('show'); toggle.setAttribute('aria-expanded', 'true'); };
+      var closeMenu = function() { menu.classList.remove('show'); toggle.setAttribute('aria-expanded', 'false'); };
+      dropdown.addEventListener('mouseenter', openMenu);
+      dropdown.addEventListener('mouseleave', closeMenu);
+      toggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (menu.classList.contains('show')) { closeMenu(); } else { openMenu(); }
+      });
+      document.addEventListener('click', function(e) {
+        if (!dropdown.contains(e.target)) { closeMenu(); }
+      });
+    }
+  })();
+
+  (function() {
+    var tabLinks = document.querySelectorAll('#manageTabs .nav-link');
+    var panes = document.querySelectorAll('.tab-content .tab-pane');
+    tabLinks.forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        tabLinks.forEach(function(l) { l.classList.remove('active'); });
+        panes.forEach(function(p) { p.classList.remove('show', 'active'); });
+        link.classList.add('active');
+        var target = document.querySelector(link.getAttribute('href'));
+        if (target) { target.classList.add('show', 'active'); }
+        var tab = link.id.replace('tablink-', '');
+        var url = new URL(window.location);
+        url.searchParams.set('active_tab', tab);
+        history.replaceState(null, '', url);
+      });
+    });
+  })();
+
+  (function() {
+    document.querySelectorAll('[data-edit-target]').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        var target = document.getElementById(btn.getAttribute('data-edit-target'));
+        if (target) { target.classList.toggle('show'); }
+      });
+    });
+  })();
+
+  (function() {
+    document.querySelectorAll('a[data-confirm]').forEach(function(a) {
+      a.addEventListener('click', function(e) {
+        if (!confirm(a.getAttribute('data-confirm'))) { e.preventDefault(); }
+      });
+    });
+    document.querySelectorAll('form[data-confirm]').forEach(function(f) {
+      f.addEventListener('submit', function(e) {
+        if (!confirm(f.getAttribute('data-confirm'))) { e.preventDefault(); }
+      });
+    });
+  })();
 
   function fieldErrorMsg(el) {
     if (el.type === 'email') return 'Email không hợp lệ';
