@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
 
   <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/3.3.0/mdb.min.css" rel="stylesheet" />
-  <title>Đăng ký quản trị viên</title>
+  <title>Đăng ký</title>
   <link rel="icon" type="image/x-icon" href="static/icon3.png">
 
 </head>
@@ -23,6 +23,7 @@
   .is-invalid { border-color: #dc3545 !important; background-image: none !important; }
   .is-valid { border-color: #28a745 !important; }
   .field-error { color: #dc3545; }
+  .choiceBtn { min-width: 260px; }
 </style>
 
 <body>
@@ -36,84 +37,109 @@
               <div class="row justify-content-center">
                 <div class="col-md-10 col-lg-6 col-xl-5 order-2 order-lg-1">
 
-                  <p class="text-center h1 fw-bold mb-5 mx-1 mx-md-4 mt-4">Đăng ký quản trị viên</p>
-                  <p class="text-center text-muted">Tài khoản Giáo viên/Học sinh vui lòng liên hệ quản trị viên để được thêm vào hệ thống qua mục "Quản lý".</p>
+                  <div id="roleChoice" {% if incorrect == True %}style="display:none;"{% endif %}>
+                    <p class="text-center h1 fw-bold mb-5 mx-1 mx-md-4 mt-4">Đăng ký</p>
+                    <p class="text-center text-muted mb-5">Vui lòng chọn loại tài khoản bạn muốn đăng ký</p>
+                    <div class="d-flex flex-column align-items-center">
+                      <button type="button" id="chooseAdminBtn" class="btn btn-dark btn-lg mb-3 choiceBtn">
+                        <i class="fas fa-user-shield me-2"></i>Đăng ký Quản trị viên
+                      </button>
+                      <button type="button" id="chooseEmployeeBtn" class="btn btn-outline-dark btn-lg choiceBtn">
+                        <i class="fas fa-user-graduate me-2"></i>Đăng ký Giáo viên/Học sinh
+                      </button>
+                    </div>
+                  </div>
 
-                  <form class="mx-1 mx-md-4" method="post" id="signupForm" novalidate>
-                    {% if incorrect == True %}
-                    <p style="color:red">{{msg}}</p>
-                    {% endif %}
-                    <div class="d-flex flex-row align-items-center mb-4">
-  <i class="fas fa-thumbtack fa-lg me-3 fa-fw"></i>
-  <div class="form-outline flex-fill mb-0">
-    <input type="text" id="form3Example1c" class="form-control form-control-lg" name="id" required />
-    <label class="form-label" for="form3Example1c">Mã số (số hoặc chữ)</label>
-  </div>
-</div>
+                  <div id="adminForm" {% if incorrect != True %}style="display:none;"{% endif %}>
+                    <p class="text-center h1 fw-bold mb-4 mx-1 mx-md-4 mt-4">Đăng ký quản trị viên</p>
+                    <p class="text-center">
+                      <a href="#" id="backToChoice"><i class="fas fa-arrow-left me-1"></i>Quay lại</a>
+                    </p>
 
-                    <div class="d-flex flex-row align-items-center mb-4">
-                      <i class="fas fa-user fa-lg me-3 fa-fw"></i>
-                      <div class="form-outline flex-fill mb-0">
-                        <input type="text" id="form3Example2c" name="name" class="form-control" required />
-                        <label class="form-label" for="form3Example2c">Họ và tên</label>
+                    <form class="mx-1 mx-md-4" method="post" id="signupForm" novalidate>
+                      {% if incorrect == True %}
+                      <p style="color:red">{{msg}}</p>
+                      {% endif %}
+                      <div class="d-flex flex-row align-items-center mb-4">
+                        <i class="fas fa-thumbtack fa-lg me-3 fa-fw"></i>
+                        <div class="form-outline flex-fill mb-0">
+                          <input type="text" id="form3Example1c" class="form-control form-control-lg" name="id" required />
+                          <label class="form-label" for="form3Example1c">Mã số (số hoặc chữ)</label>
+                        </div>
                       </div>
-                    </div>
 
-                    <div class="d-flex flex-row align-items-center mb-4">
-                      <i class="fas fa-building fa-lg me-3 fa-fw"></i>
-                      <div class="form-outline flex-fill mb-0">
-                        <input type="text" id="form3Example7c" name="workplace" class="form-control" required />
-                        <label class="form-label" for="form3Example7c">Nơi công tác</label>
+                      <div class="d-flex flex-row align-items-center mb-4">
+                        <i class="fas fa-user fa-lg me-3 fa-fw"></i>
+                        <div class="form-outline flex-fill mb-0">
+                          <input type="text" id="form3Example2c" name="name" class="form-control" required />
+                          <label class="form-label" for="form3Example2c">Họ và tên</label>
+                        </div>
                       </div>
-                    </div>
 
-                    <div class="d-flex flex-row align-items-center mb-4">
-                      <i class="fas fa-id-badge fa-lg me-3 fa-fw"></i>
-                      <div class="form-outline flex-fill mb-0">
-                        <input type="text" id="form3Example8c" name="position" class="form-control" required />
-                        <label class="form-label" for="form3Example8c">Chức vụ</label>
+                      <div class="d-flex flex-row align-items-center mb-4">
+                        <i class="fas fa-building fa-lg me-3 fa-fw"></i>
+                        <div class="form-outline flex-fill mb-0">
+                          <input type="text" id="form3Example7c" name="workplace" class="form-control" required />
+                          <label class="form-label" for="form3Example7c">Trường học</label>
+                        </div>
                       </div>
-                    </div>
 
-                    <div class="d-flex flex-row align-items-center mb-4">
-                      <i class="fas fa-envelope fa-lg me-3 fa-fw"></i>
-                      <div class="form-outline flex-fill mb-0">
-                        <input type="email" id="form3Example3c" name="mail" class="form-control" required />
-                        <label class="form-label" for="form3Example3c">Email</label>
+                      <div class="d-flex flex-row align-items-center mb-4">
+                        <i class="fas fa-id-badge fa-lg me-3 fa-fw"></i>
+                        <div class="form-outline flex-fill mb-0">
+                          <input type="text" id="form3Example8c" name="position" class="form-control" required />
+                          <label class="form-label" for="form3Example8c">Chức vụ</label>
+                        </div>
                       </div>
-                    </div>
 
-                    <div class="d-flex flex-row align-items-center mb-4">
-                      <i class="fas fa-user fa-lg me-3 fa-fw"></i>
-                      <div class="form-outline flex-fill mb-0">
-                        <input type="text" id="form3Example4c" name="username" class="form-control" required />
-                        <label class="form-label" for="form3Example4c">Tạo tên đăng nhập</label>
+                      <div class="d-flex flex-row align-items-center mb-4">
+                        <i class="fas fa-envelope fa-lg me-3 fa-fw"></i>
+                        <div class="form-outline flex-fill mb-0">
+                          <input type="email" id="form3Example3c" name="mail" class="form-control" required />
+                          <label class="form-label" for="form3Example3c">Email</label>
+                        </div>
                       </div>
-                    </div>
 
-                    <div class="d-flex flex-row align-items-center mb-4">
-                      <i class="fas fa-lock fa-lg me-3 fa-fw"></i>
-                      <div class="form-outline flex-fill mb-0">
-                        <input type="password" id="form3Example5c" name="pass" class="form-control" pattern=".{8,}"
-                        title="Ít nhất 8 ký tự" required />
-                        <label class="form-label" for="form3Example5c">Mật khẩu (ít nhất 8 ký tự)</label>
+                      <div class="d-flex flex-row align-items-center mb-4">
+                        <i class="fas fa-user fa-lg me-3 fa-fw"></i>
+                        <div class="form-outline flex-fill mb-0">
+                          <input type="text" id="form3Example4c" name="username" class="form-control" required />
+                          <label class="form-label" for="form3Example4c">Tạo tên đăng nhập</label>
+                        </div>
                       </div>
-                    </div>
 
-                    <div class="d-flex flex-row align-items-center mb-4">
-                      <i class="fas fa-key fa-lg me-3 fa-fw"></i>
-                      <div class="form-outline flex-fill mb-0">
-                        <input type="password" id="form3Example6cd" class="form-control" name="pass2" required pattern=".{8,}"
-                        title="Ít nhất 8 ký tự"/>
-                        <label class="form-label" for="form3Example6cd">Nhập lại mật khẩu</label>
+                      <div class="d-flex flex-row align-items-center mb-4">
+                        <i class="fas fa-lock fa-lg me-3 fa-fw"></i>
+                        <div class="form-outline flex-fill mb-0">
+                          <input type="password" id="form3Example5c" name="pass" class="form-control" pattern=".{8,}"
+                          title="Ít nhất 8 ký tự" required />
+                          <label class="form-label" for="form3Example5c">Mật khẩu (ít nhất 8 ký tự)</label>
+                        </div>
                       </div>
-                    </div>
 
-                    <div class="d-flex justify-content-center mx-4 mb-3 mb-lg-4">
-                      <button type="submit" class="btn btn-dark btn-lg">Đăng ký</button>
-                    </div>
+                      <div class="d-flex flex-row align-items-center mb-4">
+                        <i class="fas fa-key fa-lg me-3 fa-fw"></i>
+                        <div class="form-outline flex-fill mb-0">
+                          <input type="password" id="form3Example6cd" class="form-control" name="pass2" required pattern=".{8,}"
+                          title="Ít nhất 8 ký tự"/>
+                          <label class="form-label" for="form3Example6cd">Nhập lại mật khẩu</label>
+                        </div>
+                      </div>
 
-                  </form>
+                      <div class="d-flex flex-row align-items-center mb-4">
+                        <i class="fas fa-shield-alt fa-lg me-3 fa-fw"></i>
+                        <div class="form-outline flex-fill mb-0">
+                          <input type="password" id="form3Example9c" class="form-control" name="secret_code" required />
+                          <label class="form-label" for="form3Example9c">Mã bí mật đăng ký quản trị viên</label>
+                        </div>
+                      </div>
+
+                      <div class="d-flex justify-content-center mx-4 mb-3 mb-lg-4">
+                        <button type="submit" class="btn btn-dark btn-lg">Đăng ký</button>
+                      </div>
+
+                    </form>
+                  </div>
 
                 </div>
                 <div class="col-md-10 col-lg-6 col-xl-7 d-flex align-items-center order-1 order-lg-2">
@@ -132,10 +158,34 @@
 
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/3.3.0/mdb.min.js"></script>
   <script>
+    var roleChoice = document.getElementById('roleChoice');
+    var adminForm = document.getElementById('adminForm');
+    var chooseAdminBtn = document.getElementById('chooseAdminBtn');
+    var chooseEmployeeBtn = document.getElementById('chooseEmployeeBtn');
+    var backToChoice = document.getElementById('backToChoice');
+    if (chooseAdminBtn) {
+      chooseAdminBtn.addEventListener('click', function() {
+        roleChoice.style.display = 'none';
+        adminForm.style.display = 'block';
+      });
+    }
+    if (chooseEmployeeBtn) {
+      chooseEmployeeBtn.addEventListener('click', function() {
+        window.location.href = '/registerEmployee';
+      });
+    }
+    if (backToChoice) {
+      backToChoice.addEventListener('click', function(e) {
+        e.preventDefault();
+        adminForm.style.display = 'none';
+        roleChoice.style.display = 'block';
+      });
+    }
     function fieldErrorMsg(el) {
       if (el.type === 'email') return 'Email không hợp lệ';
       if (el.name === 'pass') return 'Mật khẩu phải từ 8 ký tự trở lên';
       if (el.name === 'pass2') return 'Mật khẩu nhập lại không khớp';
+      if (el.name === 'secret_code') return 'Vui lòng nhập mã bí mật';
       return 'Vui lòng nhập trường này';
     }
     function showFieldError(el, show, msg) {
