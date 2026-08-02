@@ -1,4 +1,3 @@
-from random import randint
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -6,7 +5,6 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 from flask import Flask, render_template, request, Response, redirect, send_file, session, url_for, jsonify
 from flask_login import LoginManager, login_required, UserMixin, current_user, login_user, logout_user
-from flask_mail import Mail, Message
 from flask_sqlalchemy import SQLAlchemy
 import os
 import platform
@@ -25,9 +23,9 @@ import threading
 from playsound import playsound
 import pandas as pd
 import json
-import smtplib
 import re
 import io
+import math
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.worksheet.page import PageMargins
@@ -38,6 +36,7 @@ RECORDS_CSV_PATH = os.path.join(STATIC_DIR, 'records.csv')
 TODAY_CSV_PATH   = os.path.join(STATIC_DIR, 'todayAttendance.csv')
 HELP_JSON_PATH   = os.path.join(STATIC_DIR, 'help.json')
 CAMERA_SOUND_PATH = os.path.join(STATIC_DIR, 'cameraSound.wav')
+ADMIN_REGISTRATION_CODE = 'manifestcainaythanhcong'
 os.makedirs(STATIC_DIR, exist_ok=True)
 app = Flask(__name__)
 try:
@@ -63,39 +62,32 @@ except AttributeError:
     pass
 app.config['SECRET_KEY'] = 'mysecretkey'
 db = SQLAlchemy(app)
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com').strip()
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USE_SSL'] = False
-app.config['MAIL_USERNAME'] = (os.environ.get('MAIL_USERNAME') or 'f770654@gmail.com').strip()
-app.config['MAIL_PASSWORD'] = (os.environ.get('MAIL_PASSWORD') or 'facerecogManisha').replace(' ', '').strip()
-app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
 TRANSLATIONS = {
     'vi': {
-        'app_title': 'Hệ thống điểm danh nhân viên bằng nhận diện khuôn mặt',
+        'app_title': 'Hệ thống điểm danh trường học bằng nhận diện khuôn mặt',
         'nav_home': 'Trang chủ', 'nav_logout': 'Đăng xuất', 'nav_login': 'Đăng nhập',
         'nav_sessions': 'Buổi điểm danh', 'nav_attendance_sheet': 'Bảng điểm danh',
         'nav_recognizer': 'Nhận diện', 'nav_stats': 'Thống kê', 'nav_help': 'Trợ giúp',
-        'nav_add_employee': 'Thêm nhân viên', 'nav_reports': 'Báo cáo tổng hợp',
+        'nav_add_employee': 'Thêm học sinh/giáo viên', 'nav_reports': 'Báo cáo tổng hợp',
         'greeting': 'Xin chào',
-        'btn_add_employee': 'Thêm nhân viên mới', 'btn_recognizer': 'Nhận diện khuôn mặt',
+        'btn_add_employee': 'Thêm học sinh/giáo viên mới', 'btn_recognizer': 'Nhận diện khuôn mặt',
         'btn_attendance_sheet': 'Bảng điểm danh', 'btn_sessions': 'Buổi điểm danh',
         'btn_stats': 'Thống kê', 'btn_help': 'Trợ giúp',
 
-        'add_employee_title': 'Thêm nhân viên mới',
-        'employee_id': 'Mã nhân viên', 'full_name': 'Họ và tên', 'department': 'Phòng ban',
+        'add_employee_title': 'Thêm học sinh/giáo viên mới',
+        'employee_id': 'Mã học sinh/giáo viên', 'full_name': 'Họ và tên', 'department': 'Lớp/Môn học',
         'email': 'Email', 'upload_photo_btn': 'Tải ảnh lên (rõ nét, không chỉnh sửa để có kết quả tốt nhất)',
         'modal_choice_title': 'Bạn muốn tải ảnh bằng cách nào?',
         'upload_from_files': 'Tải từ máy tính', 'take_photo': 'Chụp ảnh',
         'switch_to_upload': 'Chuyển sang: Tải ảnh lên', 'switch_to_camera': 'Chuyển sang: Chụp ảnh',
         'submit': 'Lưu thông tin', 'reset': 'Làm lại',
-        'employee_database': 'Danh sách nhân viên', 'no_records': 'Chưa có dữ liệu',
-        'table_sno': 'STT', 'table_id': 'Mã NV', 'table_name': 'Họ tên', 'table_dept': 'Phòng ban',
-        'table_email': 'Email', 'table_hiring_date': 'Ngày vào làm', 'table_photo': 'Ảnh', 'table_action': 'Thao tác',
+        'employee_database': 'Danh sách học sinh/giáo viên', 'no_records': 'Chưa có dữ liệu',
+        'table_sno': 'STT', 'table_id': 'Mã số', 'table_name': 'Họ tên', 'table_dept': 'Lớp/Môn học',
+        'table_email': 'Email', 'table_hiring_date': 'Ngày vào trường', 'table_photo': 'Ảnh', 'table_action': 'Thao tác',
         'delete': 'Xoá', 'update': 'Cập nhật', 'cancel': 'Huỷ',
         'confirm_delete_suffix': 'sẽ bị xoá vĩnh viễn khỏi hệ thống',
-        'warning_no_photo': 'Lưu ý: bạn chưa tải ảnh lên. Nên thêm ảnh để hệ thống có thể tự động điểm danh cho nhân viên này.',
-        'error_duplicate_id': 'Mã nhân viên hoặc tên đăng nhập đã tồn tại. Vui lòng thử lại.',
+        'warning_no_photo': 'Lưu ý: bạn chưa tải ảnh lên. Nên thêm ảnh để hệ thống có thể tự động điểm danh cho học sinh/giáo viên này.',
+        'error_duplicate_id': 'Mã học sinh/giáo viên hoặc tên đăng nhập đã tồn tại. Vui lòng thử lại.',
 
         'start_recognition': 'Bắt đầu nhận diện', 'back_to_home': 'Quay về trang chủ',
         'status_not_started': 'Chưa bắt đầu.', 'status_recognizing': 'Đang nhận diện...',
@@ -104,30 +96,30 @@ TRANSLATIONS = {
         'lang_switch': 'EN',
     },
     'en': {
-        'app_title': 'Face Recognition Employee Attendance System',
+        'app_title': 'Face Recognition School Attendance System',
         'nav_home': 'Home', 'nav_logout': 'Logout', 'nav_login': 'Login',
         'nav_sessions': 'Attendance Sessions', 'nav_attendance_sheet': 'Attendance Sheet',
         'nav_recognizer': 'Recognizer', 'nav_stats': 'Statistics', 'nav_help': 'Help',
-        'nav_add_employee': 'Add Employee', 'nav_reports': 'Reports Dashboard',
+        'nav_add_employee': 'Add Student/Teacher', 'nav_reports': 'Reports Dashboard',
         'greeting': 'Hey',
-        'btn_add_employee': 'Add New Employee', 'btn_recognizer': 'Recognizer',
+        'btn_add_employee': 'Add New Student/Teacher', 'btn_recognizer': 'Recognizer',
         'btn_attendance_sheet': 'Attendance Sheet', 'btn_sessions': 'Attendance Sessions',
         'btn_stats': 'Statistics', 'btn_help': 'Help',
 
-        'add_employee_title': 'Add New Employee',
-        'employee_id': 'Employee ID', 'full_name': 'Full Name', 'department': 'Department',
+        'add_employee_title': 'Add New Student/Teacher',
+        'employee_id': 'Student/Teacher ID', 'full_name': 'Full Name', 'department': 'Class/Subject',
         'email': 'Email', 'upload_photo_btn': 'Upload Photo (clear & unfiltered for best results)',
         'modal_choice_title': 'How do you want to upload the photo?',
         'upload_from_files': 'Upload from files', 'take_photo': 'Take photo',
         'switch_to_upload': 'Switch to: Upload photo', 'switch_to_camera': 'Switch to: Take photo',
         'submit': 'Submit', 'reset': 'Reset',
-        'employee_database': 'Employee Database', 'no_records': 'No Records',
-        'table_sno': 'S.No', 'table_id': 'ID', 'table_name': 'Name', 'table_dept': 'Dept',
-        'table_email': 'Email', 'table_hiring_date': 'Hiring Date', 'table_photo': 'Photo', 'table_action': 'Action',
+        'employee_database': 'Student/Teacher Database', 'no_records': 'No Records',
+        'table_sno': 'S.No', 'table_id': 'ID', 'table_name': 'Name', 'table_dept': 'Class/Subject',
+        'table_email': 'Email', 'table_hiring_date': 'Enrollment Date', 'table_photo': 'Photo', 'table_action': 'Action',
         'delete': 'Delete', 'update': 'Update', 'cancel': 'Cancel',
         'confirm_delete_suffix': 'will be permanently deleted from the system',
-        'warning_no_photo': "Warning: you did not upload a photo. Add one so this employee's attendance can be recorded automatically.",
-        'error_duplicate_id': 'Employee with the same ID or username already exists. Please try again.',
+        'warning_no_photo': "Warning: you did not upload a photo. Add one so this student/teacher's attendance can be recorded automatically.",
+        'error_duplicate_id': 'A student/teacher with the same ID or username already exists. Please try again.',
 
         'start_recognition': 'Start recognition', 'back_to_home': 'Back to home',
         'status_not_started': 'Not started.', 'status_recognizing': 'Recognizing...',
@@ -144,7 +136,12 @@ def inject_i18n():
 
     def t(key):
         return TRANSLATIONS[lang].get(key, TRANSLATIONS['vi'].get(key, key))
-    return dict(t=t, current_lang=lang)
+    try:
+        admin_user = users.query.filter_by(role='admin').first()
+        school_name = admin_user.workplace if admin_user and admin_user.workplace else ''
+    except Exception:
+        school_name = ''
+    return dict(t=t, current_lang=lang, school_name=school_name)
 @app.route('/set_lang/<lang>')
 def set_lang(lang):
     if lang in TRANSLATIONS:
@@ -153,7 +150,6 @@ def set_lang(lang):
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-mail_ = Mail(app)
 encodedList = []
 imgNames    = []
 cap         = None
@@ -166,13 +162,17 @@ last_frame_shape    = None
 MATCH_THRESHOLD = 0.50
 RECOGNITION_SEMAPHORE = threading.Semaphore(1)
 SEMAPHORE_WAIT_TIMEOUT = 20
-MAX_LIVE_FRAME_DIM = 480
-def _downscale_for_recognition(img):
+MAX_LIVE_FRAME_DIM = 640
+LIVE_STREAM_MAX_DIM = 360
+LIVE_STREAM_DETECT_INTERVAL = 0.2
+def _downscale_for_recognition(img, max_dim=None):
+    if max_dim is None:
+        max_dim = MAX_LIVE_FRAME_DIM
     h, w = img.shape[:2]
     m = max(h, w)
-    if m <= MAX_LIVE_FRAME_DIM:
+    if m <= max_dim:
         return img
-    scale = MAX_LIVE_FRAME_DIM / m
+    scale = max_dim / m
     return cv2.resize(img, (int(w * scale), int(h * scale)))
 def count_faces_lightweight(img):
     acquired = RECOGNITION_SEMAPHORE.acquire(timeout=SEMAPHORE_WAIT_TIMEOUT)
@@ -188,8 +188,9 @@ def count_faces_lightweight(img):
             return 0, f"{type(e).__name__}: {e}"
     finally:
         RECOGNITION_SEMAPHORE.release()
-ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.webp'}
-ALLOWED_IMAGE_MIMETYPES = {'image/jpeg', 'image/png', 'image/bmp', 'image/webp'}
+ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png'}
+ALLOWED_IMAGE_MIMETYPES = {'image/jpeg', 'image/png'}
+INVALID_IMAGE_TYPE_MSG = "Invalid file type. Please upload a JPG, JPEG or PNG image."
 def _is_allowed_image_file(file_storage):
     if not file_storage or not file_storage.filename:
         return False
@@ -202,7 +203,7 @@ def _is_allowed_image_file(file_storage):
     return True
 def _validate_and_save_photo(file_storage, dest_path):
     if not _is_allowed_image_file(file_storage):
-        return False, "Chỉ chấp nhận file ảnh (jpg, jpeg, png, bmp, webp)."
+        return False, INVALID_IMAGE_TYPE_MSG
     file_bytes = file_storage.read()
     npbuf = np.frombuffer(file_bytes, dtype=np.uint8)
     img = cv2.imdecode(npbuf, cv2.IMREAD_COLOR)
@@ -252,13 +253,13 @@ def _decode_image_from_request():
                        "'frame'/'image'/'file'/'photo', hoặc JSON "
                        "{'image': 'data:...base64...'}.")
     return img, None
-def _test_frame_readable(c, tries=5):
+def _test_frame_readable(c, tries=3):
     for _ in range(tries):
         ok, frame = c.read()
         if ok and frame is not None and frame.size > 0:
             if float(np.std(frame)) > 1.0:
                 return True, frame.shape
-        time.sleep(0.15)
+        time.sleep(0.05)
     return False, None
 def open_camera(index=0, width=None, height=None):
     global last_camera_status
@@ -493,9 +494,12 @@ def register():
         name      = request.form['name']
         workplace = request.form.get('workplace', '').strip()
         position  = request.form.get('position', '').strip()
-        mail      = request.form['mail'].strip()
+        mail      = request.form.get('mail', '').strip()
         pass1     = request.form['pass']
         pass2     = request.form['pass2']
+        secret_code = request.form.get('secret_code', '')
+        if secret_code != ADMIN_REGISTRATION_CODE:
+            return render_template('signup.html', incorrect=True, msg='Mã bí mật không đúng.')
         user  = users.query.filter_by(username=username).first()
         user2 = users.query.filter_by(id=id).first()
         if user is not None or user2 is not None:
@@ -503,29 +507,14 @@ def register():
                                    msg='Mã số hoặc tên đăng nhập đã tồn tại.')
         if pass1 != pass2:
             return render_template('signup.html', incorrect=True, msg="Mật khẩu không khớp.")
-        import re
-        EMAIL_RE = r'^[^@\s]+@[^@\s]+\.[^@\s]+$'
-        if not re.match(EMAIL_RE, mail):
-            return render_template('signup.html', incorrect=True,
-                                   msg="Email không hợp lệ. Vui lòng nhập đúng định dạng (VD: ten@vidu.com).")
-        existing_mail = users.query.filter_by(mail=mail).first()
-        if existing_mail is not None:
-            return render_template('signup.html', incorrect=True,
-                                   msg="Email này đã được đăng ký cho một tài khoản khác.")
-        otp = randint(100000, 999999)
-        ok, err = _sendResetMail(mail, otp)
-        if not ok:
-            if err and (err.startswith("smtp_auth:") or err.startswith("smtp_other:")):
-                friendly_msg = err.split(":", 1)[1]
-            else:
-                friendly_msg = "Không gửi được email xác nhận. Vui lòng thử lại sau."
-            return render_template('signup.html', incorrect=True, msg=friendly_msg)
-        session['otp'] = otp
-        session['pending_admin'] = dict(
-            id=id, name=name, mail=mail, username=username, pass1=pass1,
+        db.session.add(users(
+            id=id, name=name, mail=mail, username=username, password=pass1,
+            role='admin', status='active',
             workplace=workplace, position=position,
-        )
-        return render_template('OTP.html')
+        ))
+        db.session.commit()
+        return render_template('login.html', registered=True,
+                               msg="Đăng ký thành công! Bạn có thể đăng nhập ngay.")
     return render_template('signup.html')
 @app.route("/registerEmployee", methods=['GET', 'POST'])
 def registerEmployee():
@@ -541,9 +530,10 @@ def registerEmployee():
             if not invalid:
                 return redirect(f'/manage?active_tab={role}')
         else:
-            invalid, photo_error, otp_sent = _process_employee_registration()
-            if otp_sent:
-                return render_template('OTP.html')
+            invalid, photo_error, registered = _process_employee_registration()
+            if registered:
+                return render_template('login.html', registered=True,
+                                       msg="Đăng ký thành công! Tài khoản đang chờ quản trị viên phê duyệt.")
     default_role = request.args.get('role', 'student')
     if default_role not in ('teacher', 'student'):
         default_role = 'student'
@@ -555,7 +545,7 @@ def _process_employee_registration(fixed_role=None):
     id       = request.form['id']
     name     = request.form['name']
     dept     = request.form['dept']
-    mail     = request.form['mail'].strip()
+    mail     = request.form.get('mail', '').strip()
     role     = fixed_role or request.form.get('role', 'student')
     username = request.form.get('username', '').strip()
     pass1    = request.form.get('pass', '')
@@ -568,27 +558,29 @@ def _process_employee_registration(fixed_role=None):
         return 1, None, False
     if not username or pass1 != pass2 or len(pass1) < 8:
         return 3, None, False
-    tmp_photo_path = os.path.join(PENDING_PHOTOS_DIR, id + '.jpg')
+    dest_path = os.path.join(path, id + '.jpg')
     if pic is not None:
-        ok_photo, photo_error = _validate_and_save_captured(pic, tmp_photo_path)
+        ok_photo, photo_error = _validate_and_save_captured(pic, dest_path)
         pic = None
     else:
         photo = request.files.get('photo')
         if photo and photo.filename:
-            ok_photo, photo_error = _validate_and_save_photo(photo, tmp_photo_path)
+            ok_photo, photo_error = _validate_and_save_photo(photo, dest_path)
         else:
             return 2, None, False
     if not ok_photo:
         return 5, photo_error, False
-    otp = randint(100000, 999999)
-    ok, err = _sendResetMail(mail, otp)
-    if not ok:
+    try:
+        db.session.add(employee(id=id, name=name, department=dept, email=mail, role=role))
+        db.session.add(users(
+            id=id, name=name, mail=mail, username=username, password=pass1,
+            role=role, status='pending',
+        ))
+        db.session.commit()
+    except Exception as e:
+        print("[registerEmployee] Lỗi tạo tài khoản nhân sự:", e)
+        db.session.rollback()
         return 4, None, False
-    session['otp'] = otp
-    session['pending_employee'] = dict(
-        id=id, name=name, dept=dept, mail=mail, role=role,
-        username=username, pass1=pass1, photo_tmp_path=tmp_photo_path,
-    )
     return 0, None, True
 def _admin_add_employee(role):
     global pic
@@ -753,27 +745,49 @@ def _build_xlsx(title, headers, rows):
     title_cell = ws.cell(row=1, column=1, value=title)
     title_cell.font = Font(name=font_name, size=14, bold=True)
     title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    for col_idx in range(1, n_cols + 1):
+        ws.cell(row=1, column=col_idx).border = border
     ws.row_dimensions[1].height = 26
     header_row = 3
     header_fill = PatternFill(start_color='D9D9D9', end_color='D9D9D9', fill_type='solid')
+    # Determine a comfortable auto-fit width per column (in characters), generous cap so
+    # normal-length values (names, emails, dates) never need to wrap or get cut off.
+    col_widths = []
+    for col_idx in range(1, n_cols + 1):
+        header_text = str(headers[col_idx - 1])
+        max_len = max((len(line) for line in header_text.splitlines()), default=len(header_text))
+        for row in rows:
+            v = row[col_idx - 1] if col_idx - 1 < len(row) else ''
+            text = '' if v is None else str(v)
+            for line in (text.splitlines() or ['']):
+                max_len = max(max_len, len(line))
+        col_widths.append(min(max(max_len + 6, 12), 60))
     for col_idx, h in enumerate(headers, start=1):
         cell = ws.cell(row=header_row, column=col_idx, value=h)
         cell.font = Font(name=font_name, size=12, bold=True)
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
         cell.border = border
         cell.fill = header_fill
+        ws.column_dimensions[get_column_letter(col_idx)].width = col_widths[col_idx - 1]
+    header_max_lines = 1
+    for col_idx, h in enumerate(headers, start=1):
+        col_w = max(int(col_widths[col_idx - 1] * 0.75), 1)
+        for line in (str(h).splitlines() or ['']):
+            header_max_lines = max(header_max_lines, math.ceil(len(line) / col_w) if line else 1)
+    ws.row_dimensions[header_row].height = max(20, header_max_lines * 16)
     for r_idx, row in enumerate(rows, start=header_row + 1):
+        max_lines = 1
         for c_idx, val in enumerate(row, start=1):
             cell = ws.cell(row=r_idx, column=c_idx, value=val)
             cell.font = Font(name=font_name, size=12)
             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             cell.border = border
-    for col_idx in range(1, n_cols + 1):
-        max_len = len(str(headers[col_idx - 1]))
-        for row in rows:
-            v = row[col_idx - 1] if col_idx - 1 < len(row) else ''
-            max_len = max(max_len, len(str(v)))
-        ws.column_dimensions[get_column_letter(col_idx)].width = min(max(max_len + 4, 10), 40)
+            text = '' if val is None else str(val)
+            col_w = max(int(col_widths[c_idx - 1] * 0.75), 1)
+            for line in (text.splitlines() or ['']):
+                needed_lines = math.ceil(len(line) / col_w) if line else 1
+                max_lines = max(max_lines, needed_lines)
+        ws.row_dimensions[r_idx].height = max(20, max_lines * 16)
     ws.print_title_rows = f'{header_row}:{header_row}'
     ws.page_setup.orientation = 'landscape'
     ws.page_setup.fitToWidth = 1
@@ -821,8 +835,22 @@ def manage_export(section):
                 ACCOUNT_STATUS_LABELS.get(u.status, u.status), u.mail] for u in recs]
         return _xlsx_response('DUYỆT TÀI KHOẢN', headers, rows, 'duyet_tai_khoan.xlsx')
     elif section == 'classes':
-        headers = ['Khối', 'Lớp']
-        rows = [[c.grade or '', c.name] for c in _sorted_classes()]
+        classes = _sorted_classes()
+        subject_names = [s.name for s in Subject.query.all()]
+        teacher_by_id = {t.id: t for t in employee.query.filter_by(role='teacher').all()}
+        class_teacher_ids = {}
+        for a in TeacherAssignment.query.all():
+            class_teacher_ids.setdefault(a.class_name, set()).add(a.teacher_id)
+        headers = ['Lớp'] + subject_names
+        rows = []
+        for c in classes:
+            row = [c.name]
+            teacher_ids_here = class_teacher_ids.get(c.name, set())
+            for subj in subject_names:
+                names = sorted({teacher_by_id[tid].name for tid in teacher_ids_here
+                               if tid in teacher_by_id and teacher_by_id[tid].department == subj})
+                row.append(', '.join(names))
+            rows.append(row)
         return _xlsx_response('DANH SÁCH LỚP HỌC', headers, rows, 'danh_sach_lop.xlsx')
     elif section == 'subjects':
         headers = ['Môn học']
@@ -830,77 +858,78 @@ def manage_export(section):
         return _xlsx_response('DANH SÁCH MÔN HỌC', headers, rows, 'danh_sach_mon_hoc.xlsx')
     elif section == 'assignments':
         teacher_map = {e.id: e.name for e in employee.query.filter_by(role='teacher').all()}
-        headers = ['Giáo viên', 'Lớp']
-        rows = [[teacher_map.get(a.teacher_id, a.teacher_id), a.class_name] for a in TeacherAssignment.query.all()]
+        assign_by_teacher = {}
+        for a in TeacherAssignment.query.all():
+            assign_by_teacher.setdefault(a.teacher_id, []).append(a.class_name)
+        headers = ['Giáo viên', 'Lớp phụ trách']
+        rows = [[teacher_map.get(tid, tid), ', '.join(sorted(set(cls_list)))]
+               for tid, cls_list in assign_by_teacher.items()]
         return _xlsx_response('PHÂN CÔNG GIÁO VIÊN', headers, rows, 'phan_cong_giao_vien.xlsx')
     else:
         return redirect('/manage')
 def gen_frames_takePhoto():
     global cap2, pic
-    start             = timeit.default_timer()
-    flag              = False
-    num               = -1
-    last_countdown_t  = time.time()
+    last_faces = []
+    last_detect_t = 0.0
+    consecutive_fail = 0
+    MAX_CONSEC_FAIL = 60
     while True:
         if cap2 is None or not cap2.isOpened():
-            print("[takePhoto] Camera cap2 không sẵn sàng, dừng stream.")
-            break
+            print("[takePhoto] Camera cap2 không sẵn sàng, thử mở lại...")
+            cap2 = open_camera(0, width=640, height=480)
+            if cap2 is None or not cap2.isOpened():
+                print("[takePhoto] Không mở lại được camera, dừng stream.")
+                break
+            consecutive_fail = 0
         ret, frame = cap2.read()
         if not ret:
-            time.sleep(0.05)
-            continue
-        frame = cv2.flip(frame, 1)
-        small = _downscale_for_recognition(frame)
-        h0, w0 = frame.shape[:2]
-        h1, w1 = small.shape[:2]
-        INV = (h0 / h1) if h1 else 1.0
-        try:
-            img_rgb = to_rgb(small)
-            facesLoc = face_recognition.face_locations(img_rgb, number_of_times_to_upsample=1, model="hog")
-        except Exception as e:
-            print("[takePhoto] Lỗi dò khuôn mặt:", e)
-            facesLoc = []
-        if not facesLoc:
-            flag = False
-        else:
-            for faceLoc in facesLoc:
+            consecutive_fail += 1
+            if consecutive_fail >= MAX_CONSEC_FAIL:
+                print("[takePhoto] Đọc frame thất bại liên tục, thử mở lại camera...")
                 try:
-                    from deepface import DeepFace
-                    result = DeepFace.analyze(frame, actions=['emotion'],
-                                              enforce_detection=False, silent=True)
-                    if isinstance(result, list):
-                        result = result[0]
-                    dominant_emotion = result['dominant_emotion']
-                except Exception as e:
-                    print("[takePhoto] DeepFace lỗi:", e)
-                    dominant_emotion = 'neutral'
-                y1, x2, y2, x1 = faceLoc
-                y1, x2, y2, x1 = int(y1 * INV), int(x2 * INV), int(y2 * INV), int(x1 * INV)
-                elapsed = timeit.default_timer() - start
-                if dominant_emotion == 'happy' and elapsed > 5:
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    if flag:
-                        cv2.putText(frame, str(num),
-                                    (150, 200), cv2.FONT_HERSHEY_SIMPLEX,
-                                    6, (255, 255, 255), 20)
-                        if time.time() - last_countdown_t >= 1.0:
-                            num -= 1
-                            last_countdown_t = time.time()
-                    else:
-                        flag            = True
-                        num             = 3
-                        last_countdown_t = time.time()
-                else:
-                    flag = False
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                    if elapsed <= 5:
-                        remaining = int(5 - elapsed) + 1
-                        cv2.putText(frame, f"Get ready: {remaining}s",
-                                    (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.7, (0, 165, 255), 2)
-        _, buffer = cv2.imencode('.jpg', frame)
+                    cap2.release()
+                except Exception:
+                    pass
+                cap2 = open_camera(0, width=640, height=480)
+                consecutive_fail = 0
+                if cap2 is None or not cap2.isOpened():
+                    print("[takePhoto] Không mở lại được camera, dừng stream.")
+                    break
+            time.sleep(0.02)
+            continue
+        consecutive_fail = 0
+        frame = cv2.flip(frame, 1)
+        fh, fw = frame.shape[:2]
+        if max(fh, fw) > 640:
+            scale = 640 / max(fh, fw)
+            frame = cv2.resize(frame, (int(fw * scale), int(fh * scale)))
+        now = time.time()
+        if now - last_detect_t >= LIVE_STREAM_DETECT_INTERVAL:
+            last_detect_t = now
+            small = _downscale_for_recognition(frame, LIVE_STREAM_MAX_DIM)
+            h0, w0 = frame.shape[:2]
+            h1, w1 = small.shape[:2]
+            inv = (h0 / h1) if h1 else 1.0
+            try:
+                img_rgb = to_rgb(small)
+                facesLoc = face_recognition.face_locations(img_rgb, number_of_times_to_upsample=1, model="hog")
+                last_faces = [tuple(int(v * inv) for v in loc) for loc in facesLoc]
+            except Exception as e:
+                print("[takePhoto] Lỗi dò khuôn mặt:", e)
+                last_faces = []
+        if last_faces:
+            for (y1, x2, y2, x1) in last_faces:
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        else:
+            gh, gw = frame.shape[:2]
+            bw, bh = int(gw * 0.35), int(gh * 0.55)
+            gx1, gy1 = (gw - bw) // 2, (gh - bh) // 2
+            gx2, gy2 = gx1 + bw, gy1 + bh
+            cv2.rectangle(frame, (gx1, gy1), (gx2, gy2), (0, 0, 255), 2)
+        _, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
         yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n'
                + buffer.tobytes() + b'\r\n')
+        time.sleep(0.01)
 @app.route('/takePhoto', methods=['GET', 'POST'])
 def takePhoto():
     global cap2
@@ -909,7 +938,7 @@ def takePhoto():
             cap2.release()
     except Exception as e:
         print("[takePhoto route] release lỗi:", e)
-    cap2 = open_camera(0)
+    cap2 = open_camera(0, width=640, height=480)
     return Response(gen_frames_takePhoto(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 @app.route('/detect_face_live', methods=['POST'])
@@ -956,7 +985,6 @@ def capture_photo():
     })
 @app.route('/check_face', methods=['POST'])
 @login_required
-@require_role('admin', 'teacher')
 def check_face():
     img, err = _decode_image_from_request()
     if img is None:
@@ -1220,11 +1248,13 @@ def recognize_and_annotate(img, draw=True, draw_hud=False):
             cv2.putText(img, line, (10, y), cv2.FONT_HERSHEY_SIMPLEX,
                         0.5, (0, 255, 255), 1)
     return faces_info, error_message
+LIVE_RECOGNIZE_INTERVAL = 0.3
 def gen_frames():
     global cap, last_video_error
     frame_count      = 0
     consecutive_fail = 0
     MAX_CONSEC_FAIL  = 60
+    last_recognize_t = 0.0
     if cap is None or not cap.isOpened():
         err_img = np.zeros((480, 640, 3), dtype=np.uint8)
         msg1 = "KHONG MO DUOC CAMERA"
@@ -1260,14 +1290,22 @@ def gen_frames():
         consecutive_fail = 0
         frame_count += 1
         img = cv2.flip(img, 1)
+        fh, fw = img.shape[:2]
+        if max(fh, fw) > 640:
+            scale = 640 / max(fh, fw)
+            img = cv2.resize(img, (int(fw * scale), int(fh * scale)))
         cv2.putText(img, datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
                     (10, 25), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 1)
-        recognize_and_annotate(img, draw=True, draw_hud=True)
+        now = time.time()
+        if now - last_recognize_t >= LIVE_RECOGNIZE_INTERVAL:
+            last_recognize_t = now
+            recognize_and_annotate(img, draw=True, draw_hud=True)
         if frame_count % 60 == 0:
             print(f"[video] frame={frame_count} encodedDB={len(encodedList)}")
-        _, buffer = cv2.imencode('.jpg', img)
+        _, buffer = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
         yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n'
                + buffer.tobytes() + b'\r\n')
+        time.sleep(0.01)
 @app.route('/video', methods=['GET', 'POST'])
 @login_required
 @require_role('admin', 'teacher')
@@ -1616,13 +1654,54 @@ def accounts_history_export():
     headers = ['Thời gian', 'Quản trị viên', 'Tài khoản bị sửa', 'Nội dung thay đổi']
     rows = [[log.timestamp.strftime('%d-%m-%Y %H:%M:%S'), log.admin_id, log.target_id, log.action] for log in logs]
     return _xlsx_response('LỊCH SỬ CHỈNH SỬA', headers, rows, 'lich_su_chinh_sua.xlsx')
-@app.route('/profile')
+@app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    if current_user.role == 'admin':
-        return redirect('/add')
     emp = employee.query.filter_by(id=current_user.id).first()
-    return render_template('profilePage.html', emp=emp, user=current_user)
+    if request.method == 'POST':
+        name      = request.form.get('name', '').strip()
+        mail      = request.form.get('mail', '').strip()
+        workplace = request.form.get('workplace', '').strip()
+        error = None
+        if not name:
+            error = 'Họ tên không được để trống.'
+        if not error and mail and not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', mail):
+            error = 'Email không hợp lệ.'
+        photo = request.files.get('photo')
+        if not error and photo and photo.filename:
+            ok_photo, photo_err = _validate_and_save_photo(photo, os.path.join(path, current_user.id + '.jpg'))
+            if not ok_photo:
+                error = photo_err
+        if not error:
+            current_user.name      = name
+            current_user.mail      = mail
+            current_user.workplace = workplace
+            if current_user.role != 'admin':
+                position = request.form.get('position', '').strip()
+                current_user.position = position
+            if emp is not None:
+                emp.name  = name
+                emp.email = mail
+            db.session.commit()
+            _log_edit(current_user.id, current_user.id, 'tự cập nhật hồ sơ cá nhân')
+            if emp is not None:
+                try:
+                    ensure_records_csv()
+                    df = _read_records_df()
+                    df.loc[df["Id"] == current_user.id, ['Name']] = [emp.name]
+                    df.to_csv(RECORDS_CSV_PATH, index=False, encoding='utf-8-sig')
+                except Exception as e:
+                    print('[profile] Lỗi cập nhật records.csv:', e)
+            session['profile_success'] = 'Cập nhật hồ sơ thành công.'
+        else:
+            session['profile_error'] = error
+        return redirect('/profile')
+    profile_error   = session.pop('profile_error', None)
+    profile_success = session.pop('profile_success', None)
+    photo_exists = os.path.exists(os.path.join(path, current_user.id + '.jpg'))
+    return render_template('profilePage.html', emp=emp, user=current_user, role_labels=ROLE_LABELS,
+                           profile_error=profile_error, profile_success=profile_success,
+                           photo_exists=photo_exists)
 @app.route('/classes', methods=['GET', 'POST'])
 @login_required
 @require_role('admin')
@@ -2268,131 +2347,9 @@ def reports_export():
     html = _render_print_report(f"BÁO CÁO ĐIỂM DANH - {ROLE_LABELS[report_role].upper()}", meta_lines, headers, table_rows,
                                 'Thống kê trạng thái', summary_headers, summary_rows)
     return Response(html, mimetype='text/html; charset=utf-8')
-@app.route('/reset_request', methods=['GET', 'POST'])
+@app.route('/reset_request', methods=['GET'])
 def reset_request():
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        id_      = request.form.get('id', '').strip()
-        name     = request.form.get('name', '').strip()
-        email    = request.form.get('mail', '').strip()
-        user = users.query.filter_by(username=username, id=id_, name=name, mail=email).first()
-        if user is None:
-            return render_template('resetRequest.html', incorrect=True,
-                                   msg="Thông tin không khớp. Vui lòng kiểm tra lại tên đăng nhập, "
-                                       "mã số, họ tên và email.")
-        if user.status == 'disabled':
-            return render_template('resetRequest.html', incorrect=True,
-                                   msg="Tài khoản đã bị vô hiệu hoá. Vui lòng liên hệ quản trị viên.")
-        otp = randint(100000, 999999)
-        ok, err = _sendResetMail(email, otp)
-        if not ok:
-            if err and err.startswith("smtp_auth:"):
-                friendly_msg = err.split(":", 1)[1]
-            elif err and err.startswith("smtp_other:"):
-                friendly_msg = err.split(":", 1)[1]
-            else:
-                friendly_msg = ("Không gửi được email xác nhận do lỗi không "
-                                "lường trước. Vui lòng liên hệ quản trị viên "
-                                "hệ thống để được hỗ trợ.")
-            return render_template('resetRequest.html', incorrect=True,
-                                   msg=friendly_msg)
-        session['id']  = user.id
-        session['otp'] = otp
-        return render_template('OTP.html')
-    return render_template('resetRequest.html')
-def _sendResetMail(mail, otp):
-    try:
-        msg = Message('Mã xác thực OTP - Hệ thống điểm danh bằng nhận diện khuôn mặt', recipients=[mail],
-                      sender=app.config['MAIL_DEFAULT_SENDER'])
-        msg.body = (
-            "Xin chào,\n\n"
-            "Bạn vừa yêu cầu mã xác thực cho tài khoản trên Hệ thống điểm danh bằng nhận diện khuôn mặt.\n\n"
-            f"Mã OTP của bạn là: {otp}\n\n"
-            "Vui lòng nhập mã này để hoàn tất xác thực. Nếu bạn không thực hiện yêu cầu này, "
-            "vui lòng bỏ qua email và không chia sẻ mã cho bất kỳ ai.\n\n"
-            "Trân trọng,\n"
-            "Hệ thống điểm danh bằng nhận diện khuôn mặt"
-        )
-        mail_.send(msg)
-        return True, None
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"[reset_request] LỖI XÁC THỰC SMTP (535): {e}")
-        traceback.print_exc()
-        return False, (
-            "smtp_auth:Không gửi được email — tài khoản gửi mail bị Gmail từ "
-            "chối đăng nhập (sai mật khẩu hoặc chưa dùng Mật khẩu ứng dụng). "
-            "Vui lòng liên hệ quản trị viên hệ thống để kiểm tra lại cấu hình "
-            "email (MAIL_USERNAME/MAIL_PASSWORD)."
-        )
-    except (smtplib.SMTPException, OSError) as e:
-        print(f"[reset_request] LỖI SMTP/mạng khi gửi mail: {type(e).__name__}: {e}")
-        traceback.print_exc()
-        return False, (
-            "smtp_other:Không thể kết nối tới máy chủ email lúc này. Vui lòng "
-            "thử lại sau ít phút hoặc liên hệ quản trị viên hệ thống."
-        )
-    except Exception as e:
-        print(f"[reset_request] LỖI không lường trước khi gửi email OTP: {type(e).__name__}: {e}")
-        traceback.print_exc()
-        return False, f"other:{e}"
-@app.route('/verifyOTP', methods=['GET', 'POST'])
-def verifyOTP():
-    otp_raw = request.form.get('otp')
-    if 'otp' not in session or otp_raw is None:
-        return redirect('/login')
-    try:
-        otp2 = int(otp_raw.strip())
-    except ValueError:
-        return render_template('OTP.html', incorrect=True)
-    if session['otp'] != otp2:
-        return render_template('OTP.html', incorrect=True)
-    session.pop('otp', None)
-    if 'pending_admin' in session:
-        data = session.pop('pending_admin')
-        db.session.add(users(
-            id=data['id'], name=data['name'], mail=data['mail'],
-            username=data['username'], password=data['pass1'],
-            role='admin', status='active',
-            workplace=data['workplace'], position=data['position'],
-        ))
-        db.session.commit()
-        return render_template('login.html', registered=True)
-    if 'pending_employee' in session:
-        data = session.pop('pending_employee')
-        try:
-            emp = employee(id=data['id'], name=data['name'], department=data['dept'],
-                           email=data['mail'], role=data['role'])
-            db.session.add(emp)
-            db.session.add(users(
-                id=data['id'], name=data['name'], mail=data['mail'],
-                username=data['username'], password=data['pass1'],
-                role=data['role'], status='pending',
-            ))
-            db.session.commit()
-            tmp_photo_path = data.get('photo_tmp_path')
-            if tmp_photo_path and os.path.exists(tmp_photo_path):
-                os.replace(tmp_photo_path, os.path.join(path, data['id'] + '.jpg'))
-        except Exception as e:
-            print("[verifyOTP] Lỗi tạo tài khoản nhân sự:", e)
-            db.session.rollback()
-        return render_template('login.html', registered=True)
-    if 'id' in session:
-        return render_template('resetPassword.html')
-    return redirect('/login')
-@app.route('/resetPass', methods=['GET', 'POST'])
-def resetPass():
-    if 'id' not in session:
-        return redirect('/reset_request')
-    pw1 = request.form['pass1']
-    pw2 = request.form['pass2']
-    if pw1 != pw2:
-        return render_template('resetPassword.html', incorrect=True)
-    user = users.query.filter_by(id=session['id']).first()
-    if user is None:
-        return redirect('/reset_request')
-    user.password = pw1
-    db.session.commit()
-    return render_template('login.html', reseted=True)
+    return render_template('resetPassword.html')
 @app.route('/get')
 def get_bot_response():
     userText = request.args.get('msg')
